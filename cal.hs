@@ -1,12 +1,7 @@
--- Utilities
-
--- this part not relevant
-natural_numbers :: Integral n => [n]
-natural_numbers = 0 : [x + 1 | x <- natural_numbers]
-
-
--- the interesting stuff
 -- Text Formatting
+
+data Month = Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec
+	deriving (Eq, Ord, Enum, Read, Show)
 
 data Date = DMY Integer Integer Integer
 
@@ -56,8 +51,7 @@ weekday_name 7 = "Saturday"
 -- Date functions
 
 is_leap_year :: Integral a => a -> Bool
-is_leap_year year	
-			| (year < 1800) = (mod year 4) == 0
+is_leap_year year	| (year < 1800) = (mod year 4) == 0
 			| (year >= 1800) = ((mod year 4) == 0)
 				&& (((mod year 400) == 0)
 					|| (not ((mod year 100) == 0)))
@@ -69,9 +63,10 @@ days_in_year year = if is_leap_year year then 366 else 365
 days_in_february :: Integral a => a -> a
 days_in_february year = if is_leap_year year then 29 else 28
 
-days_in_month:: Integral a => a -> a -> a
+days_in_month :: Integral a => a -> a -> a
 days_in_month 9 1752 = 19
-days_in_month m y = [31, (days_in_february y), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] !! m
+days_in_month m y = days
+	where days = ([31, (days_in_february y), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] ++ (repeat 0)) !! (fromInteger (toInteger m))
 
 day :: Date -> Integer
 day (DMY d 1 1) = d
@@ -84,26 +79,22 @@ day (DMY d m y) = if (m == 9) && (y == 1752)
 			else (day (DMY d (m - 1) y) + days_in_month (m - 1) y)
 
 normalize_date :: Date -> Date
-normalize_date (DMY d 9 1752)
-    | d < 3 = (DMY d 9 1752)
-    | (d >= 3) && (d < 14) = (DMY 14 9 1752)
-	| (d >= 14) && (d <= 30) = (DMY d 9 1752)
-	| (d > 30) = normalize_date (DMY (d - 30) 10 1752)
-normalize_date (DMY d 8 1752)
-    | d <= 31 = (DMY d 8 1752)
-    | (d > 31) && (d <= 61) = normalize_date (DMY (d - 31) 9 1752)
-	| d > 61 = normalize_date (DMY (d - 61) 10 1752)
-normalize_date (DMY d m y)
-    | m == 13 = normalize_date(DMY d 1 (y + 1))
-    | m < 13 = if (d <= d_i_m)
-	   then (DMY d m y)
-        else normalize_date(DMY (d - d_i_m) (m + 1) y)
-            where d_i_m = days_in_month m y
+normalize_date (DMY d 9 1752)	| d < 3 = (DMY d 9 1752)
+					| (d >= 3) && (d < 14) = (DMY 14 9 1752)
+					| (d >= 14) && (d <= 30) = (DMY d 9 1752)
+					| (d > 30) = normalize_date (DMY (d - 30) 10 1752)
+normalize_date (DMY d 8 1752)	| d <= 31 = (DMY d 8 1752)
+					| (d > 31) && (d <= 61) = normalize_date (DMY (d - 31) 9 1752)
+					| d > 61 = normalize_date (DMY (d - 61) 10 1752)
+normalize_date (DMY d m y)	| m == 13 = normalize_date(DMY d 1 (y + 1))
+					| m < 13 = if (d <= d_i_m)
+						then (DMY d m y)
+						else normalize_date(DMY (d - d_i_m) (m + 1) y)
+							where d_i_m = days_in_month m y
 
 date :: Integer -> Date
 date 1 = (DMY 1 1 1)
-date d
-    | d < 639799 = normalize_date (DMY d 1 1)
+date d	| d < 639799 = normalize_date (DMY d 1 1)
 	| d >= 639799 = normalize_date (DMY (d - 639785) 9 1752)
 
 weekday :: Date -> Integer
