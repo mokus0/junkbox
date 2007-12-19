@@ -19,24 +19,31 @@ class (Base a) => Foo a where
 	foo :: a -> IO ()
 	foo x = out x "foo"
 
+class (Base a) => Eep a where
+	eep :: a -> IO ()
+	eep x = out x "eep"
+
 class (Base a) => Bar a where
 	bar :: a -> IO ()
 	bar x = out x "bar"
 
-
-instance (Bar a) => Foo a
-
-data BaseImpl = Base String
+data EepImpl = Eep
 	deriving (Eq, Show)
 
-instance Base BaseImpl where
-	out (Base name) str = do
-		putStr name
-		putStr " says: "
-		putStrLn str
+instance Base EepImpl
+instance Eep EepImpl
 
-data BarImpl = Bar
-	deriving (Eq, Show)
+newtype BarImpl = Bar EepImpl
+	deriving (Eq, Show, Base, Eep)
 
-instance Base BarImpl
+instance Foo BarImpl
 instance Bar BarImpl
+
+class (Base a) => Qux a where
+	qux :: a -> IO ()
+	qux x = out x "qux"
+
+newtype QuxImpl = Qux BarImpl
+	deriving (Eq, Show, Base, Foo, Bar)
+
+instance Qux QuxImpl
