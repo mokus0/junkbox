@@ -70,6 +70,7 @@ days_in_month m y = days
 
 day :: Date -> Integer
 day (DMY d 1 1) = d
+day (DMY 1 1 1900) = 693598
 day (DMY 0 1 y) = day (DMY 0 1 (y - 1)) + days_in_year (y - 1)
 day (DMY d 1 y) = day (DMY 0 1 y) + d
 day (DMY d m y) = if (m == 9) && (y == 1752)
