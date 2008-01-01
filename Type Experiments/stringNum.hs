@@ -35,4 +35,4 @@ instance Floating String
 		atanh x = x ++ " " ++ "atanh"
 		acosh x = x ++ " " ++ "acosh"
 
-eval::(Num a) => String -> a
+eval :: (Num a) => String -> a
