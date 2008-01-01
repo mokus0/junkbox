@@ -128,3 +128,14 @@ farey100 = 0%1 : 1%100 : _farey (zip (farey100) (tail (farey100)))
 				c = numerator y
 				d = denominator y
 				k = floor (fromRational ((100 + b) % d))
+
+
+farey10000 = 3333%10000 : 1%3 : _farey (zip (farey10000) (tail (farey10000)))
+	where
+		_farey ((x,y):xs) = if (y == 1) then [] else ((k*c-a)%(k*d-b): (_farey xs))
+			where
+				a = numerator x
+				b = denominator x
+				c = numerator y
+				d = denominator y
+				k = floor (fromRational ((10000 + b) % d))
