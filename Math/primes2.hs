@@ -27,7 +27,7 @@ x %= y = (y `rem` x) == 0
 
 isPrime 0 = False
 isPrime 1 = False
-isPrime x = not (isComposite x)
+isPrime x = x > 0 && not (isComposite x)
 isComposite x = any (\y -> x `mod` y == 0) (takeWhile (x >^2) primes)
 divisors x = filter (%= x) (takeWhile (x >=) [1..])
 
