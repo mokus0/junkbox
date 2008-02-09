@@ -50,8 +50,8 @@ a = do
     
     return x
 
--- runA == id
+-- |runA == id|
 runA x = fst $ runState a x
 
--- runA' == (^2)
+-- |runA' == (^2)|
 runA' x = fst $ runRevState a x
