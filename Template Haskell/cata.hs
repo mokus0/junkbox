@@ -43,6 +43,11 @@ conArgTypes (RecC    _ args)    = map (\(_,_,ty) -> ty) args
 conArgTypes (InfixC t1 _ t2)    = [snd t1, snd t2]
 conArgTypes (ForallC _ _ con)   = conArgTypes con
 
+typeDecDataCons :: Dec -> [Con]
+typeDecDataCons (DataD _ _ _ cons _)    = cons
+typeDecDataCons (NewtypeD _ _ _ con _)  = [con]
+typeDecDataCons (TySynD _ _ ty)         = error "typeDecDataCons doesn't support type synonyms"
+
 cataClause :: ExpQ -> Name -> [Name] -> Int -> Con -> Int -> ClauseQ
 cataClause self ty funcNames nCons con conN = do
         let cName = conName con
@@ -58,8 +63,11 @@ cataClause self ty funcNames nCons con conN = do
         let conArgP = conP cName conArgsPs
         
         let addRecursion argType argE = case argType of
-                AppT (ConT x) _ | x == ty -> appE self argE
-                _               -> argE
+                ConT x
+                        | x == ty       -> appE self argE
+                AppT (ConT x) _ 
+                        | x == ty       -> appE self argE
+                _                       -> argE
         let argTypes = conArgTypes con
         let conArgsEsWithRecursion = zipWith addRecursion argTypes conArgsEs
         
@@ -77,7 +85,8 @@ cataDec fName self ty funcNames cons = funD fName clauses
 
 cata :: Name -> ExpQ
 cata ty = do
-        TyConI (DataD _ _ _ cons _) <- reify ty
+        TyConI (typeDec) <- reify ty
+        let cons = typeDecDataCons typeDec
         fName <- newName "cata"
         let fE = varE fName
         
