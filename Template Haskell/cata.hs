@@ -1,4 +1,4 @@
-{-# OPTIONS -fth #-}
+{-# OPTIONS -fth -fglasgow-exts #-}
 {-
  -	"cata.hs"
  -	(c) 2008 James Cook
@@ -15,6 +15,10 @@ import Control.Monad
 
 -- some fun: |$(cata ''Void)| panics ghc 6.6.1; check 6.8.x later
 data Void
+
+instance Show Void
+        where
+                showsPrec p void = showString "(void)"
 
 replaceAt :: Integral a => a -> b -> [b] -> [b]
 replaceAt _     _ []     = []
@@ -43,6 +47,11 @@ conArgTypes (RecC    _ args)    = map (\(_,_,ty) -> ty) args
 conArgTypes (InfixC t1 _ t2)    = [snd t1, snd t2]
 conArgTypes (ForallC _ _ con)   = conArgTypes con
 
+typeCons :: Name -> Q [Con]
+typeCons ty = do
+        TyConI (typeDec) <- reify ty
+        return (typeDecDataCons typeDec)
+
 typeDecDataCons :: Dec -> [Con]
 typeDecDataCons (DataD _ _ _ cons _)    = cons
 typeDecDataCons (NewtypeD _ _ _ con _)  = [con]
@@ -55,7 +64,6 @@ cataClause self ty funcNames nCons con conN = do
         
         let funcName = funcNames !! conN
         let funcE = varE funcName
---        let funcP = varP funcName
         
         conArgs <- replicateM conArity (newName "x")
         let conArgsPs = map varP conArgs
@@ -85,8 +93,7 @@ cataDec fName self ty funcNames cons = funD fName clauses
 
 cata :: Name -> ExpQ
 cata ty = do
-        TyConI (typeDec) <- reify ty
-        let cons = typeDecDataCons typeDec
+        cons <- typeCons ty
         fName <- newName "cata"
         let fE = varE fName
         
