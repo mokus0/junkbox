@@ -1,4 +1,4 @@
-{-# OPTIONS -fno-monomorphism-restriction -XGADTs #-}
+{-# OPTIONS -fno-monomorphism-restriction #-}
 {-
  -      ``Expr2.hs''
  -      (c) 2008 James Cook
@@ -6,7 +6,7 @@
 
 module Expr2 where
 
-import Prelude hiding (($))
+import Prelude hiding (succ, pred, exp)
 import Triple hiding (fold)
 import Data.Maybe
 
@@ -78,6 +78,19 @@ reduce' e
         where e' = reduce e
 
 -- some handy constructors
+lam x e = Lam (bind' 0 e)
+        where 
+                bind' d (Const k)       = Const k
+                bind' d (Bound i)       = Bound i
+                bind' d (Free v)
+                        | v == x        = Bound d
+                        | otherwise     = Free v
+                bind' d (Lam e)         = Lam (bind' (d+1) e)
+                bind' d (App e as)      = App (bind' d e) (map (bind' d) as)
+              
+lambdas = flip (foldr lam)
+                
+
 infixl 9 $>
 x $> y = App x [y]
 
@@ -94,14 +107,77 @@ i'' = Free "i"
 i' = s' $> k' $> k'
 i = i' >>= subst "k" k >>= subst "s" s
 
-y = Lam (Lam (App g [g]))
-        where g = App (Bound 1) [Bound 0, Bound 0]
+-- Y = λf·(λx·f (x x)) (λx·f (x x))
+y = lam "f" (g $> g)
+        where g = lam "x" (Free "f" $> (Free "x" $> Free "x"))
 
 -- this version diverges under our evaluation strategy
--- y'' = Free "y"
--- y' = App s' [ App k' [App s' [i',i']]
---             , App s' [ App s' [App k' [s'], s']
---                      , App k' [App s' [i', i']]
---                      ]
---             ]
--- y = y' >>= subst "i" i' >>= subst "s" s >>= subst "k" k
+-- (should be: S (K (S I I)) (S (S (K S) K) (K (S I I))))
+y2'' = Free "y2"
+y2' = App s' [ App k' [sii]
+             , App s' [ App s' [App k' [s'], k']
+                      , App k' [sii]
+                      ]
+             ] where sii = App s' [i', i']
+y2 = y2' >>= subst "i" i' >>= subst "s" s >>= subst "k" k
+
+-- S S K (S (K (S S (S (S S K)))) K)
+-- (also diverges)
+y3'' = Free "y3"
+y3' = App ssk [ App s' [ App k' [ App s' [s'
+                                         , App s' [ssk]
+                                         ]
+                                ]
+                       ]
+              , k'
+              ] where ssk = App s' [s', k']
+y3 = y3' >>= subst "s" s >>= subst "k" k
+
+-- Yk = (L L L L L L L L L L L L L L L L L L L L L L L L L L)
+-- L = λabcdefghijklmnopqstuvwxyzr. (r (t h i s i s a f i x e d p o i n t c o m b i n a t o r))
+l' = Free "l"
+l = lambdas "abcdefghijklmnopqstuvwxyzr" (App (Free "r") (args "thisisafixedpointcombinator"))
+        where
+                lambdas :: [Char] -> Expr k String -> Expr k String
+                lambdas = flip (foldr (lam.return))
+                args :: [Char] -> [Expr x String]
+                args = fmap (return.return)
+               
+data A = forall a. Eq a => A a
+                
+y4'' = Free "y4"
+y4' = App l' (replicate 25 (l'))
+y4 = y4' >>= subst "l" l
+
+zero = lam "f" (lam "x" (return "x"))
+succ = lam "n" (lam "f" (lam "x" (App f [App n [f, x]])))
+        where
+                f = Free "f"
+                n = Free "n"
+                x = Free "x"
+
+-- pred ≡ λn.λf.λx. n (λg.λh. h (g f)) (λu. x) (λu. u)
+pred = lambdas ["n", "f", "x"] $
+        App n [ lambdas ["g", "h"] (h $> (g $> f))
+              , lam "u" x
+              , lam "u" u
+              ] where
+                      [n, f, x, g, h, u] = map Free ["n", "f", "x", "g", "h", "u"]
+
+nats = iterate (reduce' . (succ $>)) zero
+nat = (nats !!)
+
+plus = lambdas ["m", "n", "f", "x"] (App m [f, App n [f,x]])
+        where
+                [m,n,f,x] = map Free ["m", "n", "f", "x"]
+
+mult = lambdas ["m", "n", "f"] (App n [App m [f]])
+        where
+                [m,n,f] = map Free ["m", "n", "f"]
+
+exp = lam "m" (lam "n" (App (Free "n") [Free "m"]))
+
+sub = lambdas ["m", "n"] (exp $> pred $> Free "n" $> Free "m")
+
+true  = lambdas ["x", "y"] (return "x")
+false = lambdas ["x", "y"] (return "y")
