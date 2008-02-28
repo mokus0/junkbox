@@ -1,5 +1,5 @@
 #!runhaskell
-{-# OPTIONS -fglasgow-exts #-}
+{-# OPTIONS -fglasgow-exts -fallow-overlapping-instances -fallow-incoherent-instances #-}
 {-
  -	"RevState.hs"
  -	(c) 2007 James Cook
@@ -8,8 +8,12 @@
 module RevState where
 
 import Control.Monad.State
+import Control.Arrow
 
 newtype RevState s a = RevState {runRevState :: s -> (a, s)}
+
+instance Functor (RevState s) where
+        fmap f (RevState x) = RevState (fmap (f *** id) x)
 
 instance Monad (RevState s) where
     return a = RevState (\s -> (a, s))
