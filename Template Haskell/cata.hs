@@ -56,6 +56,7 @@ typeDecDataCons :: Dec -> [Con]
 typeDecDataCons (DataD _ _ _ cons _)    = cons
 typeDecDataCons (NewtypeD _ _ _ con _)  = [con]
 typeDecDataCons (TySynD _ _ ty)         = error "typeDecDataCons doesn't support type synonyms"
+typeDecDataCons _                       = error "typeDecDataCons: not a type"
 
 cataClause :: ExpQ -> Name -> [Name] -> Int -> Con -> Int -> ClauseQ
 cataClause self ty funcNames nCons con conN = do
