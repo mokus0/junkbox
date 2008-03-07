@@ -1,4 +1,4 @@
-{-# OPTIONS -fno-monomorphism-restriction #-}
+{-# OPTIONS -fglasgow-exts -fno-monomorphism-restriction -XGADTs #-}
 {-
  -      ``Expr2.hs''
  -      (c) 2008 James Cook
