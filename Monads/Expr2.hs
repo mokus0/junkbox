@@ -1,4 +1,4 @@
-{-# OPTIONS -fno-monomorphism-restriction #-}
+{-# OPTIONS -fno-monomorphism-restriction -XGADTs #-}
 {-
  -      ``Expr2.hs''
  -      (c) 2008 James Cook
@@ -10,12 +10,12 @@ import Prelude hiding (($))
 import Triple hiding (fold)
 import Data.Maybe
 
-data Expr k v
-        = Const k
-        | Bound Int
-        | Free v
-        | Lam (Expr k v)
-        | App (Expr k v) [Expr k v]
+data Expr k v where
+        Const   :: k -> Expr k v
+        Bound   :: Int -> Expr k v
+        Free    :: v -> Expr k v
+        Lam     :: Expr k v -> Expr k v
+        App     :: Expr k v -> [Expr k v] -> Expr k v
         deriving (Eq, Show)
 
 fold f1 f2 f3 f4 f5 (Const k)           = f1 k
