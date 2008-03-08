@@ -9,6 +9,7 @@ module Expr2 where
 import Prelude hiding (succ, pred, exp)
 import Triple hiding (fold)
 import Data.Maybe
+import Control.Monad.State
 
 data Expr k v where
         Const   :: k -> Expr k v
@@ -78,6 +79,13 @@ reduce' e
         where e' = reduce e
 
 -- some handy constructors
+lambda e = do   -- this one's not as handy
+        b <- get
+        put (b ++ "'")
+        
+        e <- e (Free b)
+        return (lam b e)
+        
 lam x e = Lam (bind' 0 e)
         where 
                 bind' d (Const k)       = Const k
