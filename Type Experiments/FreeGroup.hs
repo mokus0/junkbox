@@ -26,7 +26,10 @@ fold (*) inv var unit (Inv x)   = inv (fold (*) inv var unit x)
 fold (*) inv var unit (Var x)    = var x
 fold (*) inv var unit (Unit)    = unit
 
-
+-- various normalization laws; the ``free group'' is not the free term algebra
+-- of this data type; I'd like to experiment a bit and see whether it can be
+-- expressed as a free algebra of some type or mutually recursive system of
+-- types - or perhaps using a GADT?
 reduce (Inv Unit) = Unit
 reduce (Inv (Inv x)) = reduce x
 reduce (Inv (x :*: y)) = reduce (reduce (Inv (reduce y)) :*: reduce (Inv (reduce x)))
