@@ -12,24 +12,39 @@ module Data.StateRef where
 
 import Data.Monoid
 import Control.Monad
+import Control.Arrow
 
 import Data.IORef
 import Control.Concurrent.STM
 
-class StateRef sr m a | sr -> m a where
+class (Monad m) => StateRef sr m a | sr -> a where
         newRef :: a -> m sr
         readRef :: sr -> m a
         writeRef :: sr -> a -> m ()
+        
+        modifyRef :: sr -> (a -> a) -> m (a, a)
+        modifyRef ref f = do
+                x <- readRef ref
+                let x' = f x
+                writeRef ref x'
+                return (x, x')
 
 instance StateRef (IORef a) IO a where
         newRef = newIORef
         readRef = readIORef
         writeRef = writeIORef
+        modifyRef ref f = atomicModifyIORef ref (f &&& id &&& f)
 
 instance StateRef (TVar a) STM a where
         newRef = newTVar
         readRef = readTVar
         writeRef = writeTVar
+
+instance StateRef (TVar a) IO a where
+        newRef                  = newTVarIO
+        readRef ref             = atomically (readTVar ref)
+        writeRef ref val        = atomically (writeTVar ref val)
+        modifyRef ref f         = atomically (modifyRef ref f)
 
 -- > refMaybe ||= computation
 -- >         = do
