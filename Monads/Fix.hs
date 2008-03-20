@@ -4,9 +4,12 @@
  -      (c) 2008 James Cook
  -}
 
+-- not really all that interesting in practice - it seems
+-- monads are a lot like fixed points of their functors already ;-)
+
 module Fix where
 
-import Triple hiding (Var, fold)
+import Triple
 
 data Fix m a 
         = Var a
@@ -27,7 +30,7 @@ simplify m = case etaInv m >>= etaInv of
         Nothing         -> Fix m
         Just x          -> Var x
 
-instance (Triple m) => Triple (Fix m) where
+instance (Functor m, Triple m) => Triple (Fix m) where
         eta             = Var
         
         etaInv = fold Just (mu.etaInv)
@@ -41,6 +44,10 @@ instance Show a => Show (Fix [] a) where
 instance Show a => Show (Fix Maybe a) where
         showsPrec p (Var a) = showParen (p > 10) (showString "Var " . showsPrec 0 a)
         showsPrec p (Fix m) = showParen (p > 10) (showString "Fix " . showsPrec 0 m)
+
+subst fv x v
+        | v == fv       = x
+        | otherwise     = return v
 
 flatten (Var a) = return a
 flatten (Fix m) = mu (fmap flatten m)

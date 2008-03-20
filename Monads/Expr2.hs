@@ -7,7 +7,7 @@
 module Expr2 where
 
 import Prelude hiding (succ, pred, exp)
-import Triple hiding (fold)
+import Triple
 import Data.Maybe
 import Control.Monad.State
 
