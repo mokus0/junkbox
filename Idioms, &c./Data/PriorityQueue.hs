@@ -19,9 +19,16 @@
  -         dequeue q :: STM Integer
  -}
 
-module Data.PriorityQueue (PriorityQueue, mkQueue, insert, dequeue, peek) where
+module Data.PriorityQueue (
+                PriorityQueue,
+                
+                mkQueue, mkQueueBy,
+                
+                insert, dequeue, peek
+        ) where
 
 import Data.StateRef
+import Util.ReOrd
 import qualified Data.Map as M
 
 data PQ a = forall p. Ord p =>
@@ -41,6 +48,13 @@ mkQueue :: (DefaultStateRef sr m1 (PQ a),
 mkQueue f = do
         pq <- newRef (PQ f M.empty)
         return (PriorityQueue pq)
+
+-- This one takes a comparator instead of a function to convert to
+-- a separate priority type.
+mkQueueBy :: (DefaultStateRef sr m1 (PQ a),
+              StateRef sr m (PQ a)) =>
+             (a -> a -> Ordering) -> m (PriorityQueue m1 a)
+mkQueueBy cmp = mkQueue (ReOrd cmp)
 
 insert :: a -> PriorityQueue m a -> m ()
 insert x (PriorityQueue pqRef) = do
