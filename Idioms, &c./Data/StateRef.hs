@@ -32,9 +32,15 @@ class (Monad m) => StateRef sr m a | sr -> a where
                 writeRef ref x'
                 return (x, x')
 
-class (StateRef sr m a) => DefaultStateRef sr m a | sr -> m a, m a -> sr where
+class (StateRef sr m a) => DefaultStateRef sr m a | m a -> sr where
         newRef' :: a -> m sr
         newRef' = newRef
+        readRef' :: sr -> m a
+        readRef' = readRef
+        writeRef' :: sr -> a -> m ()
+        writeRef' = writeRef
+        modifyRef' :: sr -> (a -> a) -> m (a, a)
+        modifyRef' = modifyRef
 
 instance DefaultStateRef (IORef a) IO a
 instance StateRef (IORef a) IO a where
@@ -75,9 +81,9 @@ readsRef r f = do
         return (f x)
 
 newCounter n = do
-        c <- newRef' n
+        c <- newRef n
         return $ do
-                x <- readRef c
+                x <- readRef' c
                 writeRef c (succ x)
                 return x
 
