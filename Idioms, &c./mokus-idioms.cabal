@@ -13,7 +13,9 @@ description:            Eclectic collection of things I have found useful
 Library
   hs-source-dirs:       .
   exposed-modules:      Data.StateRef
+                        Data.ReOrdMap
+                        Data.PriorityQueue
                         Util.Misc
                         Util.STMIO
                         Util.ReOrd
-  build-depends:        base >= 3, haskell98, stm
+  build-depends:        base >= 3, containers, haskell98, stm
