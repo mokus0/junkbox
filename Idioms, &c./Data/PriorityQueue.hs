@@ -19,7 +19,7 @@
  -         dequeue q :: STM Integer
  -}
 
-module Data.PriorityQueue where
+module Data.PriorityQueue (PriorityQueue, mkQueue, insert, dequeue, peek) where
 
 import Data.StateRef
 import qualified Data.Map as M
@@ -34,8 +34,8 @@ data PriorityQueue m a = forall sr. DefaultStateRef sr m (PQ a) =>
 
 -- heh... I love type inference - it would've taken me a long time to
 -- come up with this manually
-mkQueue :: (Data.StateRef.DefaultStateRef sr m1 (PQ a),
-            Data.StateRef.StateRef sr m (PQ a),
+mkQueue :: (DefaultStateRef sr m1 (PQ a),
+            StateRef sr m (PQ a),
             Ord p) =>
            (a -> p) -> m (PriorityQueue m1 a)
 mkQueue f = do
@@ -63,3 +63,10 @@ dequeue q@(PriorityQueue pqRef) = do
                 Just ((k,i:is), pq')    -> do
                         writeRef pqRef (PQ f (M.insert k is pq'))
                         return (Just i)
+
+peek :: PriorityQueue m a -> m [a]
+peek (PriorityQueue pqRef) = do
+        PQ f pq <- readRef pqRef
+        let (ks, vss) = unzip (M.toAscList pq)
+        return (concat vss)
+        

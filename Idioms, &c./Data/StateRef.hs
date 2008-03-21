@@ -67,31 +67,22 @@ instance StateRef (TVar a) IO a where
         writeRef ref val        = atomically (writeTVar ref val)
         modifyRef ref f         = atomically (modifyRef ref f)
 
--- > refMaybe ||= computation
--- >         = do
--- >                 old <- readRef refMaybe
--- >                 case old of
--- >                         Nothing -> do
--- >                                 new <- computation
--- >                                 writeRef refMaybe new
--- >                         Just _  -> return ()
-
+-- can't use fmap, because Functor isn't a superclass of Monad, 
+-- despite the fact that every Monad is a functor.
+readsRef :: (StateRef sr m a,
+             Monad m) =>
+            sr -> (a -> b) -> m b
 readsRef r f = do
         x <- readRef r
         return (f x)
 
+newCounter :: (DefaultStateRef sr m1 a,
+               StateRef sr m a,
+               Enum a) =>
+              a -> m (m1 a)
 newCounter n = do
         c <- newRef n
         return $ do
                 x <- readRef' c
                 writeRef c (succ x)
                 return x
-
-ref ||= computation
-        = do
-                old <- readRef ref
-                if old == mzero
-                        then do
-                                new <- computation
-                                writeRef ref new
-                        else return ()
