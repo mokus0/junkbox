@@ -1,0 +1,18 @@
+name:                   mokus-idioms
+version:                0.001
+stability:              experimental
+
+cabal-version:          >= 1.2
+build-type:             Simple
+
+author:                 James Cook <james.cook@usma.edu>
+maintainer:             James Cook <james.cook@usma.edu>
+
+description:            Eclectic collection of things I have found useful
+
+Library
+  hs-source-dirs:       .
+  exposed-modules:      Data.StateRef
+                        Util.Misc
+                        Util.STMIO
+  build-depends:        base >= 3, haskell98, stm
