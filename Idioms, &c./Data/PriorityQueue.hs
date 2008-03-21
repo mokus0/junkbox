@@ -7,9 +7,10 @@
  -      (c) 2008 Cook, J. MR  SSD, Inc.
  -
  -      this kicks ass, if I do say so myself ;-)
- -      the |DefaultStateRef| class makes this highly usable, and the
- -      laxity of the |StateRef| class's fundeps makes queues constructible
- -      in monads other than where they are intended to be used; eg:
+ -      the |DefaultStateRef| class makes the choice of |StateRef| instance
+ -      decidable, and the laxity of the |StateRef| class's fundeps makes
+ -      queues constructible in monads other than where they are intended
+ -      to be used; eg:
  -      
  -         q <- mkQueue even :: IO (PriorityQueue STM Integer)
  -      
@@ -31,7 +32,12 @@ data PQ a = forall p. Ord p =>
 data PriorityQueue m a = forall sr. DefaultStateRef sr m (PQ a) =>
         PriorityQueue (sr)
 
--- mkQueue :: (a -> p) -> m1 (PriorityQueue m a)
+-- heh... I love type inference - it would've taken me a long time to
+-- come up with this manually
+mkQueue :: (Data.StateRef.DefaultStateRef sr m1 (PQ a),
+            Data.StateRef.StateRef sr m (PQ a),
+            Ord p) =>
+           (a -> p) -> m (PriorityQueue m1 a)
 mkQueue f = do
         pq <- newRef (PQ f M.empty)
         return (PriorityQueue pq)
@@ -47,9 +53,13 @@ dequeue q@(PriorityQueue pqRef) = do
         let view = M.minViewWithKey pq
         case view of
                 Nothing                 -> return Nothing
-                Just ((k,[]), pq')          -> do
+                Just ((k,[]), pq')      -> do
+                        -- this should never happen
                         writeRef pqRef (PQ f pq')
                         dequeue q
-                Just ((k,i:is), pq')        -> do
+                Just ((k,[i]), pq')     -> do
+                        writeRef pqRef (PQ f pq')
+                        return (Just i)
+                Just ((k,i:is), pq')    -> do
                         writeRef pqRef (PQ f (M.insert k is pq'))
                         return (Just i)
