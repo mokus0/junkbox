@@ -15,4 +15,5 @@ Library
   exposed-modules:      Data.StateRef
                         Util.Misc
                         Util.STMIO
+                        Util.ReOrd
   build-depends:        base >= 3, haskell98, stm
