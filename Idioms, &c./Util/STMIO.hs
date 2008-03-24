@@ -52,8 +52,9 @@ stmOut handle = do
                 hPutStr handle str
                 atomically (writeTVar pending False)
         
-        -- the interface to be returned
-        let tPutStr = writeTChan chan
+        -- the interface to be returned. be as strict as possible,
+        -- so that exceptions in the string occur in the caller's context
+        let tPutStr str = length str `seq` writeTChan chan str
         let flush = do
                 atomically (waitFor isFlushed)
                 hFlush handle
