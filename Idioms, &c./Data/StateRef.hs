@@ -55,6 +55,12 @@ instance StateRef (STRef s a) (ST s) a where
         readRef = readSTRef
         writeRef = writeSTRef
 
+instance StateRef (STRef RealWorld a) IO a where
+        newRef = stToIO . newRef
+        readRef = stToIO . readRef
+        writeRef r = stToIO . writeRef r
+        modifyRef r = stToIO . modifyRef r
+
 instance DefaultStateRef (TVar a) STM a
 instance StateRef (TVar a) STM a where
         newRef = newTVar
