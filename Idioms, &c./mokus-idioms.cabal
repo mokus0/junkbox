@@ -12,7 +12,8 @@ description:            Eclectic collection of things I have found useful
 
 Library
   hs-source-dirs:       .
-  exposed-modules:      Data.StateRef
+  exposed-modules:      Control.Concurrent.STM.Worker
+                        Data.StateRef
                         Data.ReOrdMap
                         Data.PriorityQueue
                         Util.Misc
