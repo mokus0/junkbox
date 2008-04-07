@@ -1,5 +1,5 @@
 name:                   mokus-idioms
-version:                0.002
+version:                0.002.1
 stability:              experimental
 
 cabal-version:          >= 1.2
