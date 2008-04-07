@@ -89,6 +89,5 @@ newCounter :: (DefaultStateRef sr m1 a,
 newCounter n = do
         c <- newRef n
         return $ do
-                x <- readRef' c
-                writeRef c (succ x)
+                (x, x') <- modifyRef' c succ
                 return x
