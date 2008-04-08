@@ -64,8 +64,7 @@ insert x (PriorityQueue pqRef) = do
 dequeue :: PriorityQueue m a -> m (Maybe a)
 dequeue q@(PriorityQueue pqRef) = do
         PQ f pq <- readRef pqRef
-        let view = M.minViewWithKey pq
-        case view of
+        case M.minViewWithKey pq of
                 Nothing                 -> return Nothing
                 Just ((k,[]), pq')      -> do
                         -- this should never happen
