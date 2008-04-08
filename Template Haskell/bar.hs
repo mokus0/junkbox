@@ -9,11 +9,11 @@ module Bar where
 import Prelude hiding ((+), (*))
 import qualified Fmap
 
-class Product a b c | a b -> c
+class Product a b c | c -> a b
         where
                 (*) :: a -> b -> c
 
-class CoProduct a b c | a b -> c
+class CoProduct a b c | a b -> c, c -> a b
         where   (+) :: a -> b -> c
 
 infixl 7 *
@@ -30,6 +30,10 @@ data a :+: b
 
 data a :^: b
         = Func (b -> a)
+
+instance Product a b (a :*: b)
+        where
+                (*) = (:*:)
 
 instance Product (a -> a') (b -> b') ((a :*: b) -> (a' :*: b'))
         where
