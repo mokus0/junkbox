@@ -55,3 +55,12 @@ toHex = printf "%02x"
 
 hexdump :: [Word8] -> String
 hexdump str = intercalate " " (map toHex str)
+
+while :: (Monad m) => m Bool -> m a -> m ()
+while p f = do
+        x <- p
+        if x
+                then do
+                        f
+                        while p f
+                else return ()

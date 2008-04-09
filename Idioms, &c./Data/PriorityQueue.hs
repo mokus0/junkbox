@@ -42,7 +42,7 @@ data PriorityQueue m a = forall sr. DefaultStateRef sr m (PQ a) =>
 -- heh... I love type inference - it would've taken me a long time to
 -- come up with this manually
 mkQueue :: (DefaultStateRef sr m1 (PQ a),
-            StateRef sr m (PQ a),
+            NewStateRef sr m (PQ a),
             Ord p) =>
            (a -> p) -> m (PriorityQueue m1 a)
 mkQueue f = do
@@ -52,7 +52,7 @@ mkQueue f = do
 -- This one takes a comparator instead of a function to convert to
 -- a separate priority type.
 mkQueueBy :: (DefaultStateRef sr m1 (PQ a),
-              StateRef sr m (PQ a)) =>
+              NewStateRef sr m (PQ a)) =>
              (a -> a -> Ordering) -> m (PriorityQueue m1 a)
 mkQueueBy cmp = mkQueue (ReOrd cmp)
 
