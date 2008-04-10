@@ -13,7 +13,7 @@ import Control.Monad
 import Control.Concurrent
 import Control.Concurrent.STM
 
-type AsyncRq m rq resp = rq -> m (TMVar resp)
+type AsyncRq m rq resp = rq -> m (m resp)
 type  SyncRq m rq resp = rq -> m resp
 
 startSimpleSerialWorkerLoop :: (SyncRq IO rq resp) -> IO (AsyncRq STM rq resp)
@@ -42,7 +42,7 @@ startPolymorphicWorker wrapper worker = do
                 respVar <- newEmptyTMVar
                 writeTChan rqChan (wrapper rq respVar)
                 
-                return respVar
+                return (takeTMVar respVar)
                 
         return rqFunc
 
@@ -56,11 +56,11 @@ startWorker worker = do
                 respVar <- newEmptyTMVar
                 writeTChan rqChan (rq, respVar)
                 
-                return respVar
+                return (takeTMVar respVar)
                 
         return rqFunc
 
 toSyncRq :: AsyncRq STM rq resp -> SyncRq IO rq resp
 toSyncRq asyncRq rq = do
-        respVar <- atomically $ asyncRq rq
-        atomically $ takeTMVar respVar
+        resp <- atomically $ asyncRq rq
+        atomically $ resp
