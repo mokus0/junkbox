@@ -42,26 +42,6 @@ makeStdRqChan = do
         rqChan <- newTChanIO
         return (makeRqFunc (,) rqChan, rqChan)
 
-makePolymorphicRqChan :: (forall resp. rq resp -> TMVar resp -> wrapper)
-                      -> IO ( forall resp. AsyncRq STM (rq resp) resp
-                             , TChan wrapper
-                             )
-makePolymorphicRqChan wrapper = do
-        rqChan <- newTChanIO
-        return (makeRqFunc wrapper rqChan, rqChan)
-
-
--- Think of rq as a GADT that defines a request interface.
-startPolymorphicWorker :: (forall resp. rq resp -> TMVar resp -> wrapper)
-                       -> (TChan wrapper -> IO ())
-                       -> IO (forall resp. AsyncRq STM (rq resp) resp)
-startPolymorphicWorker wrapper worker = do
-        (rqFunc, rqChan) <- makePolymorphicRqChan wrapper
-        
-        forkIO (worker rqChan)
-        
-        return rqFunc
-
 startWorker :: (TChan (rq, TMVar resp) -> IO ())
             -> IO (AsyncRq STM rq resp)
 startWorker worker = do
@@ -71,8 +51,21 @@ startWorker worker = do
                 
         return rqFunc
 
-toSyncRq :: AsyncRq STM rq resp 
-         -> SyncRq  IO  rq resp
-toSyncRq asyncRq rq = do
-        resp <- atomically $ asyncRq rq
-        atomically $ resp
+-- Think of rq as a GADT that defines a request interface.
+makePolymorphicRqChan :: (forall resp. rq resp -> TMVar resp -> wrapper)
+                      -> IO ( forall resp. AsyncRq STM (rq resp) resp
+                             , TChan wrapper
+                             )
+makePolymorphicRqChan wrapper = do
+        rqChan <- newTChanIO
+        return (makeRqFunc wrapper rqChan, rqChan)
+
+startPolymorphicWorker :: (forall resp. rq resp -> TMVar resp -> wrapper)
+                       -> (TChan wrapper -> IO ())
+                       -> IO (forall resp. AsyncRq STM (rq resp) resp)
+startPolymorphicWorker wrapper worker = do
+        (rqFunc, rqChan) <- makePolymorphicRqChan wrapper
+        
+        forkIO (worker rqChan)
+        
+        return rqFunc
