@@ -25,38 +25,47 @@ startSimpleSerialWorkerLoop func = do
         
         startWorker worker
 
--- Think of rq as a GADT, and this might make sense.  Unfortunately I know of
--- no way to type this so that it can share code with startWorker.
--- (disregarding types, | startWorker = startPolymorphicWorker (,) |).
--- I suppose I could use Template Haskell, and give the end user the power
--- to assign any type they want.
-startPolymorphicWorker :: (forall resp. rq resp -> TMVar resp -> wrapper) 
+makeRqFunc :: (rq -> TMVar resp -> wrapper)
+           -> TChan wrapper
+           -> AsyncRq STM rq resp
+makeRqFunc wrapper rqChan = \rq -> do
+        respVar <- newEmptyTMVar
+        writeTChan rqChan (wrapper rq respVar)
+        
+        return (takeTMVar respVar)
+
+makeStdRqChan :: IO ( AsyncRq STM rq resp
+                    , TChan (rq, TMVar resp)
+                    )
+makeStdRqChan = do
+        rqChan <- newTChanIO
+        return (makeRqFunc (,) rqChan, rqChan)
+
+makePolymorphicRqChan :: (forall resp. rq resp -> TMVar resp -> wrapper)
+                      -> IO ( forall resp. AsyncRq STM (rq resp) resp
+                            , TChan wrapper
+                            )
+makePolymorphicRqChan wrapper = do
+        rqChan <- newTChanIO
+        return (makeRqFunc wrapper rqChan, rqChan)
+
+
+-- Think of rq as a GADT that defines a request interface.
+startPolymorphicWorker :: (forall resp. rq resp -> TMVar resp -> wrapper)
                        -> (TChan wrapper -> IO ())
                        -> IO (forall resp. AsyncRq STM (rq resp) resp)
 startPolymorphicWorker wrapper worker = do
-        rqChan <- newTChanIO
+        (rqFunc, rqChan) <- makePolymorphicRqChan wrapper
         
         forkIO (worker rqChan)
         
-        let rqFunc rq = do
-                respVar <- newEmptyTMVar
-                writeTChan rqChan (wrapper rq respVar)
-                
-                return (takeTMVar respVar)
-                
         return rqFunc
 
 startWorker :: (TChan (rq, TMVar resp) -> IO ()) -> IO (AsyncRq STM rq resp)
 startWorker worker = do
-        rqChan <- newTChanIO
+        (rqFunc, rqChan) <- makeStdRqChan
         
         forkIO (worker rqChan)
-        
-        let rqFunc rq = do
-                respVar <- newEmptyTMVar
-                writeTChan rqChan (rq, respVar)
-                
-                return (takeTMVar respVar)
                 
         return rqFunc
 
