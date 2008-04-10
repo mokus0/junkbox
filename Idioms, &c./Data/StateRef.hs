@@ -91,6 +91,11 @@ instance StateRef (TVar a) IO a where
 -- perhaps I ought to give up the abstractness of 'sr' in the class
 -- definition; i don't know if that gets me anywhere though... 
 --
+-- note that as long as only these instances exist, there is no
+-- actual overlap.  maybe it's not such a bad idea.  on the other
+-- hand, a corresponding instance for Reader would be nice too, and
+-- that one does have potential overlap.
+--
 -- instance (MonadState s1 m,
 --           StateRef s2 m a)
 --                 => StateRef (s1 -> s2) m a
