@@ -13,6 +13,8 @@ import Control.Monad
 import Control.Concurrent
 import Control.Concurrent.STM
 
+-- It may be tempting, but DON'T join the result of an (AsyncRq STM)!
+-- Use ToSyncRq instead.
 type AsyncRq m rq resp = rq -> m (m resp)
 type  SyncRq m rq resp = rq -> m resp
 
@@ -34,6 +36,12 @@ makeRqFunc wrapper rqChan = \rq -> do
         writeTChan rqChan (wrapper rq respVar)
         
         return (takeTMVar respVar)
+
+toSyncRq :: AsyncRq STM rq resp
+         -> SyncRq IO rq resp
+toSyncRq async rq = do
+        respVar <- atomically (async rq)
+        atomically respVar
 
 makeStdRqChan :: IO ( AsyncRq STM rq resp
                     , TChan (rq, TMVar resp)
