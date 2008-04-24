@@ -1,5 +1,5 @@
 name:                   mokus-idioms
-version:                0.003
+version:                0.3.1.0
 stability:              experimental
 
 cabal-version:          >= 1.2
@@ -13,6 +13,7 @@ description:            Eclectic collection of things I have found useful
 Library
   hs-source-dirs:       .
   exposed-modules:      Control.Concurrent.STM.Worker
+                        Control.Monad.Loops
                         Data.StateRef
                         Data.ReOrdMap
                         Data.PriorityQueue

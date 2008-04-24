@@ -14,15 +14,13 @@ import Data.Word
 import Data.List
 import Text.Printf
 
+import Control.Monad.Loops
+
 count :: (a -> Bool) -> [a] -> Int
 count f = length . filter f
 
 fix :: (a -> a) -> a
 fix f = f (fix f)
-
-infixl 8 `on`
-on :: (b -> b -> c) -> (a -> b) -> a -> a -> c
-(*) `on` f = \x y -> f x * f y
 
 maxBy :: (a -> a -> Ordering) -> a -> a -> a
 maxBy (*) x y = case x * y of
@@ -43,12 +41,6 @@ waitFor p = do
                 then return ()
                 else retry
 
-atomLoop :: STM a -> IO ()
-atomLoop = forever . atomically
-
-forkLoop :: STM a -> IO ThreadId
-forkLoop = forkIO . atomLoop
-
 toHex :: Word8 -> String
 toHex = printf "%02x"
 
@@ -56,11 +48,8 @@ toHex = printf "%02x"
 hexdump :: [Word8] -> String
 hexdump str = intercalate " " (map toHex str)
 
-while :: (Monad m) => m Bool -> m a -> m ()
-while p f = do
-        x <- p
-        if x
-                then do
-                        f
-                        while p f
-                else return ()
+tryReadTChan :: TChan a -> STM (Maybe a)
+tryReadTChan c = fmap Just (readTChan c) `orElse` return Nothing
+
+readAllTChan :: TChan a -> STM [a]
+readAllTChan c = unfoldM (tryReadTChan c)
