@@ -49,3 +49,15 @@ unfoldM m = do
                 Just x  -> do
                         xs <- unfoldM m
                         return (return x `mplus` xs)
+
+{-# SPECIALIZE unfoldrM :: (Monad m) => (a -> m (Maybe (b,a))) -> a -> m [b] #-}
+{-# SPECIALIZE unfoldrM :: (a -> IO (Maybe (b,a))) -> a -> IO [b] #-}
+
+unfoldrM :: (Monad m, MonadPlus f) => (a -> m (Maybe (b,a))) -> a -> m (f b)
+unfoldrM f z = do
+        x <- f z
+        case x of
+                Nothing         -> return mzero
+                Just (x, z)     -> do
+                        xs <- unfoldrM f z
+                        return (return x `mplus` xs)
