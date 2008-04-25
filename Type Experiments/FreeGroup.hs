@@ -59,16 +59,26 @@ instance (Eq a, Show a) => Num (FreeGroup a) where
     x * y = reduce (x :*: y)
 
 instance (Eq a, Show a) => Fractional (FreeGroup a) where
-    recip = Inv
+    recip = reduce . Inv
 
 x = Var "x"
 y = Var "y"
 z = Var "z"
 
+-- commutators
+c x y           = recip x * recip y * x * y
+c2 x y z        = c z (x * y) * c y x
 
---instance Functor FreeGroup where
---    fmap f = fold (:*:) Inv (Var . f) Unit
---
---instance Monad FreeGroup where
---    return = Var
---    x >>= f = reduce (fold (:*:) Inv f Unit x)
+-- handy for working with many free-algebra monads
+swap x y z 
+        | x == y        = z     -- no-op when Eq is not strict equality
+        | z == x        = y
+        | z == y        = x
+        | otherwise     = z
+
+instance Functor FreeGroup where
+    fmap f = fold (:*:) Inv (Var . f) Unit
+
+instance Monad FreeGroup where
+    return = Var
+    x >>= f = (fold (:*:) Inv f Unit x)
