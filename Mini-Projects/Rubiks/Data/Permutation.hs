@@ -8,7 +8,7 @@ module Data.Permutation where
 import qualified Data.List as L
 import qualified Data.Map as M
 
-newtype Perm = Perm { toMap :: M.Map Int Int }
+newtype Perm t = Perm { toMap :: M.Map t t }
         deriving (Eq, Show)
 
 fromList l = Perm (M.fromList (zip [1..] l))
@@ -27,7 +27,7 @@ decompMap p = M.mapMaybeWithKey findCycle p
                         | k == v        = []
                         | otherwise     = v : closure k (p M.! v)
 
-decomp :: Perm -> [[Int]]
+decomp :: (Ord t) => Perm t -> [[t]]
 decomp = filter ((> 1) . length) . map (uncurry (:)) . M.toList . decompMap . toMap
 
 permutations 0 xs = return []
