@@ -9,12 +9,32 @@ import Data.List
 import Control.Monad.State
 import Control.Monad.List
 
-permuteBy select []     = [[]]
-permuteBy select xs     = [(x:zs) | (x, ys) <- select xs
+permuteBy select []     = return []
+permuteBy select xs     = [(y:zs) | (y, ys) <- select xs
                                   , zs <- permuteBy select ys]
 
+permuteBy2 select xs    = do
+        (y, ys) <- select xs
+        zs <- if null ys then [[]] else permuteBy2 select ys
+        return (y:zs)
+
+        
+
+permuteBy3 select xs = select xs >>= \ (y, ys) -> if null ys
+                then [[]] else permuteBy3 select ys >>= \ zs -> return (y :
+                zs)
+                        
+if' x y z = if x then y else z
+
+permuteBy4 :: ([a] -> [(a1, [a])]) -> [a] -> [[a1]]
+permuteBy4 = fix ((ap (flip if' [[]] . null) .) . liftM2 flip ((>>=) .) . flip flip snd . (ap .) . flip flip fst . ((.) .) . flip flip ((return .) . (:)) . (((.) . flip . ((>>=) .)) .))
+
+--
+permuteBy5 select xs = if null xs then [[]] else select xs >>= (\(y, ys) -> permuteBy5 select ys >>= (\zs -> return (y:zs)))
+
+
 select [] = []
-select (x:xs) = (x, xs) : [(y, x:ys) | !(y, ys) <- select xs]
+select (x:xs) = (x, xs) : [(y, x:ys) | (y, ys) <- select xs]
 
 select2 [] = []
 select2 (x:xs) = (x, xs) : do
@@ -66,3 +86,11 @@ select9 xs = evalState (runListT f) ([], xs)
                 (is, (_:ts)) <- lift get
                 lift (put (x:is, ts))
                 return (x, is ++ ts)
+
+-- as @pl'd by susie @ #technote
+select10 = snd . (mapAccumL (uncurry ((`ap` tail) . (. head) . ((const .) .) . ap (ap . ((ap . ((,) .) . (,)) .) . flip (:)) (flip ((.) . (,)) . (++)))) =<< (,) [])
+
+--permuteBy4select10 = permuteBy4 select10
+permuteBy4select10 = (liftM2 flip ((>>=) .) ((`ap` snd) . (. fst) . (ap (flip if' [[]] . null) .) . (. ((return .) . (:))) . flip . ((>>=) .) . permuteBy)) (snd . (mapAccumL (uncurry ((`ap` tail) . (. head) . ((const .) .) . ap (ap . ((ap . ((,) .) . (,)) .) . flip (:)) (flip ((.) . (,)) . (++)))) =<< (,) []))
+
+permute4_10 = liftM2 flip ((>>=) .) ((`ap` snd) . (. fst) . (ap (flip if' [[]] . null) .) . (. ((return .) . (:))) . flip . ((>>=) .) . permuteBy) (snd . (mapAccumL (uncurry ((`ap` tail) . (. head) . ((const .) .) . ap (ap . ((ap . ((,) .) . (,)) .) . flip (:)) (flip ((.) . (,)) . (++)))) =<< (,) []))
