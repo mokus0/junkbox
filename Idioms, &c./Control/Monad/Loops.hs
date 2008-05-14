@@ -97,3 +97,11 @@ trimM p xs = do
         xs <- dropWhileM p xs
         rxs <- dropWhileM p (reverse xs)
         return (reverse rxs)
+
+firstM :: (Monad m) => (a -> m Bool) -> [a] -> m (Maybe a)
+firstM p [] = return Nothing
+firstM p (x:xs) = do
+        q <- p x
+        if q
+                then return (Just x)
+                else firstM p xs
