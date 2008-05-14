@@ -27,6 +27,12 @@ maxBy (*) x y = case x * y of
         LT      -> y
         _       -> x
 
+limit _   _      []    = []
+limit end (n+1) (x:xs) = x : limit end n xs
+limit end _     (x:xs) = end
+
+limitStr n = limit "..." (n-3)
+
 waitForEvent p events = waitForEvent' p (readTChan events)
 
 waitForEvent' p events = do
