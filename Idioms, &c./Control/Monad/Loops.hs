@@ -61,3 +61,39 @@ unfoldrM f z = do
                 Just (x, z)     -> do
                         xs <- unfoldrM f z
                         return (return x `mplus` xs)
+
+{-# SPECIALIZE concatM :: [a -> IO a] -> (a -> IO a) #-}
+
+concatM :: (Monad m) => [a -> m a] -> (a -> m a)
+concatM fs x = foldl (>>=) (return x) fs
+
+{-# SPECIALIZE anyM :: [a -> IO Bool] -> (a -> IO Bool) #-}
+{-# SPECIALIZE allM :: [a -> IO Bool] -> (a -> IO Bool) #-}
+
+anyM, allM :: (Monad m) => [a -> m Bool] -> (a -> m Bool)
+anyM []     x = return False
+anyM (p:ps) x = do
+        q <- p x
+        if q
+                then return True
+                else anyM ps x
+
+allM []     x = return True
+allM (p:ps) x = do
+        q <- p x
+        if q
+                then allM ps x
+                else return False
+
+dropWhileM, trimM :: (Monad m) => (a -> m Bool) -> [a] -> m [a]
+dropWhileM p []     = return []
+dropWhileM p (x:xs) = do
+        q <- p x
+        if q
+                then dropWhileM p xs
+                else return xs
+
+trimM p xs = do
+        xs <- dropWhileM p xs
+        rxs <- dropWhileM p (reverse xs)
+        return (reverse rxs)
