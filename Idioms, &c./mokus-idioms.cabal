@@ -16,6 +16,7 @@ Library
                         Control.Monad.Loops
                         Data.StateRef
                         Data.ReOrdMap
+                        Data.ToString
                         Data.PriorityQueue
                         Util.Misc
                         Util.STMIO
