@@ -5,12 +5,11 @@
 
 module Util.STMIO where
 
-import Util.Misc
-
 import Control.Concurrent
 import Control.Concurrent.STM
 
 import Control.Monad
+import Control.Monad.Loops
 
 import IO
 
@@ -56,7 +55,7 @@ stmOut handle = do
         -- so that exceptions in the string occur in the caller's context
         let tPutStr str = length str `seq` writeTChan chan str
         let flush = do
-                atomically (waitFor isFlushed)
+                atomically (waitForTrue isFlushed)
                 hFlush handle
         
         return (tPutStr, flush)

@@ -19,40 +19,18 @@ import Control.Monad.Loops
 count :: (a -> Bool) -> [a] -> Int
 count f = length . filter f
 
-fix :: (a -> a) -> a
-fix f = f (fix f)
-
 maxBy :: (a -> a -> Ordering) -> a -> a -> a
 maxBy (*) x y = case x * y of
         LT      -> y
         _       -> x
 
+limit :: Integral b => [a] -> b -> [a] -> [a]
 limit _   _      []    = []
 limit end (n+1) (x:xs) = x : limit end n xs
 limit end _     (x:xs) = end
 
+limitStr :: Integral a => a -> [Char] -> [Char]
 limitStr n = limit "..." (n-3)
-
-waitForEvent p events = waitForEvent' p (readTChan events)
-
-waitForEvent' p events = do
-        event <- events
-        if p event
-                then return event
-                else retry
-
-waitFor p = do
-        x <- p
-        if x
-                then return ()
-                else retry
-
-toHex :: Word8 -> String
-toHex = printf "%02x"
-
-
-hexdump :: [Word8] -> String
-hexdump str = intercalate " " (map toHex str)
 
 tryReadTChan :: TChan a -> STM (Maybe a)
 tryReadTChan c = fmap Just (readTChan c) `orElse` return Nothing

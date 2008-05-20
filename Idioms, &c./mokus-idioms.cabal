@@ -1,5 +1,5 @@
 name:                   mokus-idioms
-version:                0.3.1.0
+version:                0.3.1.2
 stability:              experimental
 
 cabal-version:          >= 1.2
@@ -16,6 +16,7 @@ Library
                         Control.Monad.Loops
                         Data.StateRef
                         Data.ReOrdMap
+                        Data.ToHex
                         Data.ToString
                         Data.PriorityQueue
                         Util.Misc
