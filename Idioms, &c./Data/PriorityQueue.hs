@@ -1,7 +1,3 @@
-{-# LANGUAGE 
-        ExistentialQuantification,
-        FlexibleContexts
-  #-}
 {-
  -      ``Data/PriorityQueue.hs''
  -      (c) 2008 Cook, J. MR  SSD, Inc.
@@ -18,6 +14,10 @@
  -         insert (x :: Integer) q :: STM ()
  -         dequeue q :: STM Integer
  -}
+{-# LANGUAGE 
+        ExistentialQuantification,
+        FlexibleContexts
+  #-}
 
 module Data.PriorityQueue (
                 PriorityQueue,
