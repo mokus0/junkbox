@@ -20,12 +20,14 @@ count :: (a -> Bool) -> [a] -> Int
 count f = length . filter f
 
 limit :: Integral b => [a] -> b -> [a] -> [a]
-limit _   _      []    = []
-limit end (n+1) (x:xs) = x : limit end n xs
-limit end _     (x:xs) = end
+limit end n str = limit' end (n - genericLength end) str
+        where
+                limit' _   _      []    = []
+                limit' end (n+1) (x:xs) = x : limit' end n xs
+                limit' end _     (x:xs) = end
 
 limitStr :: Integral a => a -> [Char] -> [Char]
-limitStr n = limit "..." (n-3)
+limitStr = limit "..."
 
 tryReadTChan :: TChan a -> STM (Maybe a)
 tryReadTChan c = fmap Just (readTChan c) `orElse` return Nothing
