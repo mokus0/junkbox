@@ -16,6 +16,10 @@ import Text.Printf
 
 import Control.Monad.Loops
 
+-- this one's here just because I type 'clear' so often in ghci, to no avail
+clear :: IO ()
+clear = putStr "\x1b\x5b\x48\x1b\x5b\x32\x4a"
+
 count :: (a -> Bool) -> [a] -> Int
 count f = length . filter f
 
