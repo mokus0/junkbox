@@ -76,6 +76,8 @@ cataClause self ty funcNames nCons con conN = do
                         | x == ty       -> appE self argE
                 AppT (ConT x) _ 
                         | x == ty       -> appE self argE
+                AppT (AppT (ConT x) _) _ 
+                        | x == ty       -> appE self argE
                 _                       -> argE
         let argTypes = conArgTypes con
         let conArgsEsWithRecursion = zipWith addRecursion argTypes conArgsEs
