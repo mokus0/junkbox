@@ -24,6 +24,8 @@ import Data.STRef
 
 import Control.Concurrent.STM
 
+import Foreign
+
 class (StateRef sr m a) => NewStateRef sr m a where
         newRef :: a -> m sr
 
@@ -85,6 +87,15 @@ instance StateRef (TVar a) IO a where
         readRef ref             = atomically (readTVar ref)
         writeRef ref val        = atomically (writeTVar ref val)
         modifyRef ref f         = atomically (modifyRef ref f)
+
+instance Storable a => NewStateRef (Ptr a) IO a where
+        newRef val = do
+                ptr <- malloc
+                poke ptr val
+                return ptr
+instance Storable a => StateRef (Ptr a) IO a where
+        readRef = peek
+        writeRef = poke
 
 -- this is an instance I would like to make, but it opens
 -- a big can of worms... it requires incoherent instances, for one.
