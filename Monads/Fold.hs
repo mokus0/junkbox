@@ -44,7 +44,7 @@ instance Fold Bool where
         fold (a,b) x = if x then a else b
 
 -- I imagine there could possibly be legitimate uses for something like this:
---> type instance Enum a => FoldSig a x = [x]
+--> type instance Enum a => FoldSig a x = Int -> x
 --> instance Enum a => Fold a where
--->         fold xs e = xs !! fromEnum e
+-->         fold = (. fromEnum)
 
