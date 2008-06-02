@@ -4,7 +4,8 @@
  -}
 {-# LANGUAGE
         TypeFamilies,
-        RankNTypes
+        RankNTypes,
+        ScopedTypeVariables
   #-}
 
 module Fold where
@@ -26,6 +27,14 @@ instance Fold [x] where
 type instance UnfoldSig [x] a = a -> Either () (x, a)
 instance Unfold [x] where
         unfold f = unfoldr (unfold f)
+
+-- this definition is, unfortunately, unusable without the (t, –) in the return type
+-- - without it, there's no 'handle' with which to force unification of the folded-over type.
+type Hylo t = forall x y. UnfoldSig t x -> FoldSig t y -> x -> (t, y)
+hylo :: (Fold t, Unfold t) => Hylo t
+hylo s1 s2 x = (u, fold s2 u)
+        where
+                u = unfold s1 x
 
 -- some small tuples...
  -- the 'fold' operation is only slightly nontrivial,
