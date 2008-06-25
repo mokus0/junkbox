@@ -1,5 +1,5 @@
 #!runhaskell
-{-# OPTIONS -fglasgow-exts -fallow-undecidable-instances #-}
+{-# OPTIONS -fglasgow-exts -fallow-undecidable-instances -fextended-default-rules #-}
 {-
  -	"LispNum.hs"
  -	(c) 2007 James Cook
@@ -14,13 +14,14 @@ import Prelude
 	hiding ((+))
 import qualified Prelude
 
-class LispNum a b
+-- functional dependencies help a bit.  extended default rules don't seem to.
+class LispNum a b | a -> b
 	where
 		(+) :: a -> b
 
-instance LispNum a a
-	where
-		(+) a = a
+--instance Num a => LispNum a a
+--	where
+--		(+) a = a
 
 instance (Prelude.Num a) => LispNum (a,a) a
 	where
