@@ -5,22 +5,38 @@
 
 module FreeNum where
 
-data FreeNum a
-        = Var a
-        | FreeNum a :+: FreeNum a
-        | FreeNum a :-: FreeNum a
-        | FreeNum a :*: FreeNum a
-        | Negate (FreeNum a)
-        | Abs (FreeNum a)
-        | Signum (FreeNum a)
+default (FreeNum)
+
+x = sum [1..10]
+
+data FreeNum
+        = FreeNum :+: FreeNum
+        | FreeNum :-: FreeNum
+        | FreeNum :*: FreeNum
+        | Negate FreeNum
+        | Abs FreeNum
+        | Signum FreeNum
         | FromInteger Integer
         deriving (Eq, Ord, Show)
+
+foldNum (+) (-) (*) negate abs signum fromInteger num = case num of
+        (a :+: b)       -> f a + f b
+        (a :-: b)       -> f a - f b
+        (a :*: b)       -> f a * f b
+        Negate a        -> negate (f a)
+        Abs a           -> abs (f a)
+        Signum a        -> signum (f a)
+        FromInteger a   -> fromInteger a
+        where f = foldNum (+) (-) (*) negate abs signum fromInteger
+
+toNum :: Num a => FreeNum -> a
+toNum = foldNum (+) (-) (*) negate abs signum fromInteger 
 
 infixl 6 :+:
 infixl 6 :-:
 infixl 7 :*:
 
-instance (Eq a, Show a) => Num (FreeNum a) where
+instance Num FreeNum where
         (+)             = (:+:)
         (-)             = (:-:)
         (*)             = (:*:)
@@ -29,13 +45,16 @@ instance (Eq a, Show a) => Num (FreeNum a) where
         signum          = Signum
         fromInteger     = FromInteger
 
+instance Enum FreeNum where
+        toEnum = fromInteger . toEnum
+        fromEnum = fromEnum . toNum
+
 --reduceBy :: [FreeNum -> [FreeNum]] -> FreeNum -> [FreeNum]
 reduceBy laws thing = do
         let recurse thing = case thing of
-                Var x           -> []
-                x :+: y         -> [x :+: y | x <- reduceBy laws x] ++ [x :+: y | y <- reduceBy laws y]
-                x :-: y         -> [x :-: y | x <- reduceBy laws x] ++ [x :-: y | y <- reduceBy laws y]
-                x :*: y         -> [x :*: y | x <- reduceBy laws x] ++ [x :*: y | y <- reduceBy laws y]
+                x :+: y         -> [x :+: y  | x <- reduceBy laws x] ++ [x :+: y | y <- reduceBy laws y]
+                x :-: y         -> [x :-: y  | x <- reduceBy laws x] ++ [x :-: y | y <- reduceBy laws y]
+                x :*: y         -> [x :*: y  | x <- reduceBy laws x] ++ [x :*: y | y <- reduceBy laws y]
                 Negate x        -> [Negate x | x <- reduceBy laws x]
                 Abs x           -> [Abs    x | x <- reduceBy laws x]
                 Signum x        -> [Signum x | x <- reduceBy laws x]
