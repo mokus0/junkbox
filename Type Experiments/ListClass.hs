@@ -3,19 +3,17 @@
  -      "ListClass.hs"
  -      (c) 2008 James Cook
  -      
- -      This would be nifty if it were allowed...
+ -      This would be nifty if original : and [] could be redefined.
  -}
 
 module ListClass where
 
-import qualified Prelude
-
-class List h t l | h t -> l
+class List h t l | h t -> l, l -> h t
         where 
-                (:)     :: h -> t -> l
-                []      :: l
+                cons     :: h -> t -> l
+                nil      :: l
 
-instance List x (Prelude.[] x) (Prelude.[] x)
+instance List x [x] [x]
         where
-                (:) = (Prelude.:)
-                [] = Prelude.[]
+                cons = (:)
+                nil = []
