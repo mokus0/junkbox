@@ -1,9 +1,8 @@
+{-# OPTIONS -fglasgow-exts -fallow-undecidable-instances -fallow-overlapping-instances #-}
 import Monad
 import System
 
 		-- Haskell kicks ass.
-		-- use:
-		-- 		ghci -fglasgow-exts -fallow-undecidable-instances
 		
 
 instance (Num a) => Num [a]
