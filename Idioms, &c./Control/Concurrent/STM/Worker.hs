@@ -1,5 +1,5 @@
 {-# LANGUAGE
-        Rank2Types
+        Rank2Types, ExistentialQuantification, NoMonomorphismRestriction, NoMonoPatBinds
   #-}
 {-
  -      ``Control/Concurrent/STM/Worker.hs''
@@ -59,21 +59,30 @@ startWorker worker = do
                 
         return rqFunc
 
+-- ghc-6.9.03132008's (,) doesn't play nice with the types I was using in, so
+--   in the grand ghc tradition of calling things stupid when they don't fit into my worldview:
+data StupidTuple rq wrapper = forall resp. StupidTuple (AsyncRq STM (rq resp) resp) (TChan wrapper)
+
 -- Think of rq as a GADT that defines a request interface.
 makePolymorphicRqChan :: (forall resp. rq resp -> TMVar resp -> wrapper)
-                      -> IO ( forall resp. AsyncRq STM (rq resp) resp
-                             , TChan wrapper
-                             )
+                        -> IO (StupidTuple rq wrapper)
+--                      -> IO ( forall resp. AsyncRq STM (rq resp) resp
+--                             , TChan wrapper
+--                             )
 makePolymorphicRqChan wrapper = do
         rqChan <- newTChanIO
-        return (makeRqFunc wrapper rqChan, rqChan)
+        return (StupidTuple (makeRqFunc wrapper rqChan) rqChan)
 
-startPolymorphicWorker :: (forall resp. rq resp -> TMVar resp -> wrapper)
-                       -> (TChan wrapper -> IO ())
-                       -> IO (forall resp. AsyncRq STM (rq resp) resp)
-startPolymorphicWorker wrapper worker = do
-        (rqFunc, rqChan) <- makePolymorphicRqChan wrapper
-        
-        forkIO (worker rqChan)
-        
-        return rqFunc
+-- BROKEN on 6.9.03132008, and I can't seem to fix it.  Hopefully just a transient compiler glitch.
+--startPolymorphicWorker :: (forall resp. rq resp -> TMVar resp -> wrapper)
+--                       -> (TChan wrapper -> IO ())
+--                       -> IO (forall resp. AsyncRq STM (rq resp) resp)
+--startPolymorphicWorker wrapper worker = do
+--        stupidTuple <- makePolymorphicRqChan wrapper
+--        
+--        case stupidTuple of
+--                StupidTuple rqFunc rqChan -> do
+--                        forkIO (worker rqChan)
+--        
+--                        return rqFunc
+--
