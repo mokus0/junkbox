@@ -1,9 +1,8 @@
+{-# OPTIONS -fglasgow-exts -fallow-undecidable-instances #-}
 import Monad
 import System
 
 		-- Haskell kicks ass.
-		-- use:
-		-- 		ghci -fglasgow-exts -fallow-undecidable-instances
 		
 
 instance (Monad m, Num a, Eq (m a), Show (m a)) => Num (m a)
