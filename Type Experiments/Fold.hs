@@ -11,6 +11,7 @@
 module Fold where
         
 import Data.List
+import Data.Function
 
 type family FoldSig t a :: *
 class Fold t where
@@ -98,15 +99,23 @@ instance Unfold Bool where
         unfold = id
 
 -- (->):
-type instance FoldSig (a -> b) x = (a, b -> x)
+--type instance FoldSig (a -> b) x = (a, b -> x)
+--instance Fold (a -> b) where
+--        fold (a, g) f = g (f a)
+
+type instance FoldSig (a -> b) x = (x -> a, b -> x)
 instance Fold (a -> b) where
-        fold (a, g) f = g (f a)
+        fold (g, h) f = fix (h . f . g)
 
   -- I'm not sure this makes a lot of sense.  It does seem intuitively to
   -- be related to the FoldSig instances for tuples, but it doesn't seem 'natural'.
-type instance UnfoldSig (a -> b) x = (x, a) -> b
+--type instance UnfoldSig (a -> b) x = (x, a) -> b
+--instance Unfold (a -> b) where
+--        unfold = curry
+
+type instance UnfoldSig (a -> b) x = (a -> x, x -> b)
 instance Unfold (a -> b) where
-        unfold = curry
+        unfold (g, h) x = \a -> undefined
 
 -- I imagine there could possibly be legitimate uses for something like this:
 -- > type instance Enum a => FoldSig a x = Int -> x
