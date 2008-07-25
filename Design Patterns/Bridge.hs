@@ -22,6 +22,7 @@ class DrawingAPI api where
         {- drawCircle api (x,y) radius -}
         drawCircle :: api -> (Double, Double) -> Double -> IO ()
 
+{- Unspecified ("Existential") Implementor -}
 data DrawingAPIE = forall api. DrawingAPI api => DrawingAPIE api
 instance DrawingAPI DrawingAPIE where
         drawCircle (DrawingAPIE api) = drawCircle api
