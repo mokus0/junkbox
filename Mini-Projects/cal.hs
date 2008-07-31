@@ -14,12 +14,6 @@ instance Eq Date where
 
 instance Ord Date where
 	compare d1 d2 = compare (day d1) (day d2)
-	d1 <= d2 = (day d1) <= (day d2)
-	d1 < d2 = (day d1) < (day d2)
-	d1 > d2 = (day d1) > (day d2)
-	d1 >= d2 = (day d1) >= (day d2)
-	max d1 d2 = date $ max (day d1) (day d2)
-	min d1 d2 = date $ min (day d1) (day d2)
 
 date_string :: Date -> String
 date_string (DMY d m y) = (weekday_name (weekday (DMY d m y))) ++ " " ++ (month_name m) ++ " " ++ (show d) ++ ", " ++ (show y)
