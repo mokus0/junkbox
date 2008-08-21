@@ -165,25 +165,32 @@ runIdentity = runIdentityFunctor . runIdentityFunctor . unCompose
 
 -- scratch space
 
-data Monoid a b where
-        MEmpty :: Monoid t t
-        MAppend :: Monoid b c -> Monoid a b -> Monoid a c
-instance Category Monoid where
-        id = MEmpty
-        (.) = MAppend
+-- argh, another panic here (triggerred by the pattern binding in the Category instance):
+-- data Monoid (~>) a b where
+--         MArr :: (t ~> t) -> Monoid (~>) t t
+
+newtype Graph (~>) a b = Arr (a ~> b)
+instance Category (~>) => Category (Graph (~>)) where
+        id = Arr id
+        (Arr f) . (Arr g) = Arr (f.g)
+
+type Monoid (~>) t = Graph (~>) t t
+mempty :: Category (~>) => Monoid (~>) t
+mempty = id
+mappend :: Category (~>) => Monoid (~>) t -> Monoid (~>) t -> Monoid (~>) t
+mappend = (.)
+
+-- now, how to actually construct a category such that I can say:
+--   "hello " `mappend` "world!"
+-- (and have it evaluate to the concatenation)
 
 -- can the "fold" concept be expressed as / derived from an adjunction?
 -- is it sensible to do so?
 
-data Groupoid a b where
-        GIdentity :: Groupoid a a
-        GMult :: Groupoid b c -> Groupoid a b -> Groupoid a c
-        GInv :: Groupoid a b -> Groupoid b a
-instance Category Groupoid where
-        id = GIdentity
-        (.) = GMult
-
-
+data Groupoid (~>) a b = GArr (a ~> b) (b ~> a)
+instance Category (~>) => Category (Groupoid (~>)) where
+        id = GArr id id
+        GArr f f' . GArr g g' = GArr (f.g) (g'.f')
 
 instance Functor (Either a) (->) (->) where
         fmap f (Left a) = Left a
