@@ -16,5 +16,5 @@ import Data.StateRef
 class Monad m => ToString m a where
         toString :: a -> m String
 
-instance (Show a, StateRef sr m a) => ToString m sr
+instance (Show a, ReadRef sr m a) => ToString m sr
         where toString = (>>= (return . show)) . readRef

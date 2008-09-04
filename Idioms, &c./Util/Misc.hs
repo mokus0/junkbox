@@ -41,3 +41,10 @@ readAllTChan c = unfoldM (tryReadTChan c)
 
 mean :: Fractional a => [a] -> a
 mean xs = sum xs / fromIntegral (length xs)
+
+-- in flux (like everything here)
+maxBy :: (a -> a -> Ordering) -> (a -> a -> a)
+maxBy (*) x y = case x * y of
+	LT -> y
+	_  -> x
+

@@ -1,5 +1,5 @@
 name:                   mokus-idioms
-version:                0.3.1.2
+version:                0.4
 stability:              experimental
 
 cabal-version:          >= 1.2
@@ -14,12 +14,8 @@ Library
   hs-source-dirs:       .
   exposed-modules:      Control.Concurrent.STM.Worker
                         Control.Monad.Loops
-                        Data.StateRef
-                        Data.ReOrdMap
                         Data.ToHex
                         Data.ToString
-                        Data.PriorityQueue
                         Util.Misc
                         Util.STMIO
-                        Util.ReOrd
-  build-depends:        base >= 3, containers, haskell98, stm
+  build-depends:        base >= 3, containers, haskell98, stateref, stm
