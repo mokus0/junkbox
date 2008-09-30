@@ -31,6 +31,7 @@ nmux zz sz zs ss (Succ x) (Succ y) = ss x y (nmux zz sz zs ss x y)
 nzip s z x Zero = z x
 nzip s z Zero y = z y
 nzip s z (Succ x) (Succ y) = s (nzip s z x y)
+-- nzip s z = nmux (z Zero) (\y _ -> z y) (\x _ -> z x) (\_ _ -> s)
 
 nzip2 s z x Zero = z x Zero
 nzip2 s z Zero y = z Zero y
