@@ -58,10 +58,7 @@ coevalC :: MonadCont c => Not c (Not c (CoFunc c a b)) -> a -> c b
 coevalC f a = force (coeval' f a)
 
 strictify :: Not c (Not c (CoFunc c a b)) -> Func c a b
-strictify a (b, c) = 
-    a (\ d -> case d of
-              Left e -> e b
-              Right f -> c f)
+strictify a (b, c) = a (either ($b) c)
 
 
 lazify :: Func c a b -> Not c (Not c (CoFunc c a b))
