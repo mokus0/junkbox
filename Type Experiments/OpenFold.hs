@@ -10,7 +10,7 @@ module OpenFold where
 -- start with the following "extension" of the type "Either":
 -- (expressed in 2 ways)
 
-data E3 a b c = E (a c) | Center b
+data E3 a b c = E (Either a c) | Center b
         deriving (Eq, Show)
 data Either3 a b c = L a | R b | C c
         deriving (Eq, Show)

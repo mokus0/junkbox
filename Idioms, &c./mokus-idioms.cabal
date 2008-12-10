@@ -13,9 +13,8 @@ description:            Eclectic collection of things I have found useful
 Library
   hs-source-dirs:       .
   exposed-modules:      Control.Concurrent.STM.Worker
-                        Control.Monad.Loops
                         Data.ToHex
                         Data.ToString
                         Util.Misc
                         Util.STMIO
-  build-depends:        base >= 3, containers, haskell98, stateref, stm
+  build-depends:        base >= 3, containers, haskell98, monad-loops, stateref, stm

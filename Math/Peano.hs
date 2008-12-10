@@ -11,8 +11,6 @@ module Peano where
 data Nat = Zero | Succ Nat
         deriving (Eq, Show)
 
-type ChurchNumeral = forall a. (a -> a) -> (a -> a)
-
 dec Zero        = error "underflow"
 dec (Succ n)    = n
 
@@ -23,10 +21,12 @@ nunfold f x = case f x of
         Nothing -> Zero
         Just y  -> Succ (nunfold f y)
 
-nmux zz sz zs ss Zero     Zero     = zz
-nmux zz sz zs ss Zero     (Succ y) = zs y (nmux zz sz zs ss Zero y)
-nmux zz sz zs ss (Succ x) Zero     = sz x (nmux zz sz zs ss x Zero)
-nmux zz sz zs ss (Succ x) (Succ y) = ss x y (nmux zz sz zs ss x y)
+nmux zz sz zs ss = go
+        where
+                go Zero     Zero     = zz
+                go Zero     (Succ y) = zs y   (go Zero y)
+                go (Succ x) Zero     = sz x   (go x Zero)
+                go (Succ x) (Succ y) = ss x y (go x y)
 
 nzip s z x Zero = z x
 nzip s z Zero y = z y
@@ -129,7 +129,6 @@ instance Num Inte where
         abs = n2i . absNat
         signum (I p n) = nzip2 id (\x y -> case compare x y of LT -> -1; EQ -> 0; GT -> 1) p n
 
-
 n2i n = I n Zero
 absNat (I p n) = nzip id id p n
 
@@ -142,3 +141,45 @@ instance Integral Inte where
                 where
                         s = signum x * signum y
                         (q, r) = quotRem (absNat x) (absNat y)
+
+data Inte2 = P Nat | N Nat deriving (Eq, Show)
+
+instance Ord Inte2 where
+        compare (P a) (P b) = compare a b
+        compare (P Zero) (N Zero) = EQ
+        compare (P a) (N b) = GT
+        
+        compare (N a) (N b) = compare b a
+        compare (N Zero) (P Zero) = EQ
+        compare (N a) (P b) = LT
+
+type ChurchNumeral = forall a. (a -> a) -> (a -> a)
+newtype CN = CN { unCN :: ChurchNumeral }
+
+instance Enum CN where
+        succ (CN n) = CN (\f -> f . n f)
+        
+        toEnum 0 = CN (const id)
+        toEnum (n+1) = succ (toEnum n)
+        
+        fromEnum (CN n) = n succ 0
+
+instance Eq CN where
+        (CN a) == (CN b) = a succ 0 == (b succ 0 :: Nat)
+
+instance Ord CN where
+        (CN a) `compare` (CN b) = a succ 0 `compare` (b succ 0 :: Nat)
+
+instance Show CN where
+        showsPrec p (CN a) = showsPrec p (a succ 0)
+
+instance Num CN where
+        fromInteger 0 = CN (const id)
+        fromInteger (n+1) = succ (fromInteger n)
+        
+        (CN a) + (CN b) = CN (\f -> a f . b f)
+        (CN a) * (CN b) = CN (a . b)
+        
+        signum x = if x == 0 then 0 else 1
+        abs x = x * signum x
+
