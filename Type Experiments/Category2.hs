@@ -1,6 +1,10 @@
 {-
  -      ``Category2''
  -      (c) 2008 Cook, J. MR  SSD, Inc.
+ -
+ -      This is probably the first time I have ever given serious
+ -      thought to what it would be like to have polymorhic kinds.
+ -      That would make things pretty nifty here.
  -}
 {-# LANGUAGE
         TypeOperators,
@@ -20,7 +24,7 @@
 module Category2 where
 
 import qualified Prelude as P
-import Prelude (Maybe(..), Either(..), Monad(..), undefined)
+import Prelude (Eq(..), Show(..), Maybe(..), Either(..), Monad(..), undefined)
 
 -- categories (hom-function as binary type constructor)
 class Category (~>) where
@@ -47,6 +51,12 @@ class (Category (~>), Category (~~>)) => Functor f (~>) (~~>)
         fmap :: (a ~> b) -> (f a ~~> f b)
 
 -- functors
+data Diag a = Pair a a
+        deriving (Eq, Show)
+
+instance Functor Diag (->) (->) where
+        fmap f (Pair x y) = Pair (f x) (f y)
+
 instance Functor ((,) a) (->) (->) where
         fmap f (a, b) = (a, f b)
 
@@ -88,7 +98,17 @@ class (Functor f (~>) (~~>), Functor g (~~>) (~>))
                 uncurry :: (x ~> g y) -> (f x ~~> y)
                 curry   :: (f x ~~> y) -> (x ~> g y)
 
--- functor composition (a Haskell housekeeping thing; can't declare instances for )
+rAdj :: (Adjoint f g (~>) (~~>)) => (f x ~~> y) -> (x ~> g y)
+rAdj = curry
+lAdj :: (Adjoint f g (~>) (~~>)) => (x ~> g y) -> (f x ~~> y)
+lAdj = uncurry
+
+unit :: (Adjoint f g (~>) (~~>)) => x ~> g (f x)
+unit = rAdj id
+coUnit :: (Adjoint f g (~>) (~~>)) => f (g y) ~~> y
+coUnit = lAdj id
+
+-- functor composition (a Haskell housekeeping thing; can't declare instances for ad-hoc type functions)
 newtype Compose f g x = RawCompose {rawUnCompose :: g (f x)}
 
 class Category (~>) => ComposeCat (~>) where
@@ -114,17 +134,35 @@ instance Adjoint f g (->) (->) => Monad (Compose f g) where
                                 . unCompose
                                 . fmap (unCompose :: Compose f g b -> g (f b)) 
 
+-- comonads
+class Functor c (->) (->) => Comonad c where
+        coReturn :: c x -> x
+        coJoin :: c x -> c (c x)
+        coBind :: c b -> (c b -> a) -> c a -- (?)
+        coBind x f = fmap f (coJoin x)
+
+instance Adjoint f g (->) (->) => Comonad (Compose g f) where
+        coReturn = uncurry id . unCompose
+        coJoin = fmap (compose :: f (g b) -> Compose g f b)
+                . compose
+                . fmap (curry id)
+                . unCompose
+
 -- state monad, arising from adjunction between tuple and arrow
 instance Adjoint ((,) a) ((->) a) (->) (->) where
         curry f = \a x -> f (x, a)
         uncurry f = \(x,a) -> f a x
 
 type State s a = Compose ((,) s) ((->)s) a
+type CoState s a = Compose ((->)s) ((,)s) a
 
 runState :: State s a -> s -> (s,a)
 runState = unCompose
 
--- Identity monad, arising from self-adjointness of Identity functor (ooh, fancy that!)
+runCoState :: CoState s a -> (s, s -> a)
+runCoState = unCompose
+
+-- Identity monad/comonad, arising from self-adjointness of Identity functor (ooh, fancy that!)
 newtype IdentityFunctor a = IdentityFunctor a
 instance IdentityFunctorCat (~>) => Functor IdentityFunctor (~>) (~>) where
         fmap f = identityFunctor . f . runIdentityFunctor
@@ -144,7 +182,6 @@ instance IdentityFunctorCat (~>) => Adjoint IdentityFunctor IdentityFunctor (~>)
 type Identity a = Compose IdentityFunctor IdentityFunctor a
 runIdentity :: (ComposeCat (~>), IdentityFunctorCat (~>)) => Identity a ~> a
 runIdentity = runIdentityFunctor . runIdentityFunctor . unCompose
-
 
 --   Subcategories (argh, this panics my ghc at home, in both of these forms:)
 -- data SubCat a b (~>) c d = (a ~ c, b ~ d) => SubCat {unSubCat :: a ~> b}
@@ -207,3 +244,34 @@ instance Adjoint (Flip (,) a) ((->) a) (->) (->) where
         curry f = \a x -> f (Flip (a,x))
         uncurry g = \(Flip (a,x)) -> g a x
 
+data Zero a = Zero
+data Const a x = Const a
+
+-- can these really be said to have adjoints?  They seem to be
+-- extremely degenerate cases.  It may be that they cannot satisfy the naturality part.
+instance Category (~>) => Functor Zero (~>) (->) where
+        fmap f = \Zero -> Zero
+
+instance Category (~>) => Functor (Const a) (~>) (->) where
+        fmap f = \(Const a) -> (Const a)
+
+-- Diagonal functor left adjoint to product
+-- (I've heard that this is true, but I can't quite resolve it in my mind it a meaningful formalism)
+-- instance Adjoint Diag ((,) a) (->) (->) where
+--         curry :: (Diag x -> y) -> (x -> (a,y))
+--         uncurry :: (x -> (a,y)) -> (Diag x -> y)
+
+-- is there a dual concept to 'currying'?
+-- curry :: ((a,b) -> c) -> (a -> (b -> c))
+-- coCurry :: (c -> Either a b) -> (c -> ??)
+
+---- curry arises as an isomophism, from adjoint functors.  What exactly
+---- would it mean to 'dualize' that?
+---- coCurry ::
+
+-- What adjunction gives rise to the [] monad in Prelude?
+-- rAdj :: (f x -> y) -> (x -> g y)
+-- lAdj :: (x -> g y) -> (f x -> y)
+--   unit :: x -> [x]
+--   unit = rAdj id
+--   
