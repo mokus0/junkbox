@@ -42,12 +42,12 @@ parseDfRecord blkSz = parse . wordsWithSpaces
                 , dfMountPt     = concat rest
                 }
             _ -> error "parseDfRecord: no parse"
-    
-wordsWithSpaces [] = []
-wordsWithSpaces xs@(' ':_) = spaces : wordsWithSpaces rest
-    where (spaces, rest) = break (/=' ') xs
-wordsWithSpaces xs = word : wordsWithSpaces rest
-    where (word, rest) = break (==' ') xs
+        
+        wordsWithSpaces [] = []
+        wordsWithSpaces xs@(' ':_) = spaces : wordsWithSpaces rest
+            where (spaces, rest) = break (/=' ') xs
+        wordsWithSpaces xs = word : wordsWithSpaces rest
+            where (word, rest) = break (==' ') xs
 
 df :: IO [DfRecord]
 df = do
