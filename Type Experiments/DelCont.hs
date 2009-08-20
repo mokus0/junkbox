@@ -1,9 +1,9 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes, FlexibleInstances #-}
 module DelCont where
 
 -- overriding monad operators to allow use of do-notation with looser types
 -- (requires NoImplicitPrelude in code using them)
-import Prelude hiding (return, (>>=), (>>), fail)
+import Prelude hiding (return, (>>=), (>>), fail, abs)
 
 newtype CC a b t =
     CC { runCC :: (t -> b) -> a }
@@ -54,7 +54,7 @@ return x = CC (\k -> k x)
 -- invoked in multiple subcontexts, or even 'eval'ed.
 -- shift :: ((forall b. t/b -> s/b) -> (1/a -> u/u)) -> (1/a -> t/s)
 
-shift :: ((forall b. t -> CC b b s) -> CC a u u) -> CC a s t
+shift :: ((t -> CC b b s) -> CC a u u) -> CC a s t
 shift  f = CC $ \k -> runCC (f (\x -> CC (\sk -> sk (k x)))) id
 
 -- shift' :: (((1/v -> t/s) -> (1/b -> v/b)) -> (1/a -> u/u)) -> (1/a -> t/s)
@@ -81,3 +81,7 @@ type Fun s a t b = s -> CC a b t
 f >=> g = \x -> f x >>= g
 
 fail = abort . return
+
+-- control abstraction and application
+abs f = reset (shift return >>= f)
+app f x = f >>= \f -> f x
