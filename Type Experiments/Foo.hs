@@ -17,3 +17,10 @@ eep@(x, bar) = foo ?foo
 instance Foo Int where
     foo (Left i) = (i, show i)
     foo (Right s) = (read s, s)
+
+-- not allowed (the instance):
+-- class Bar x where
+--     aoeu :: x -> String
+-- 
+-- instance (?bar :: String) => Bar Int where
+--     aoeu i = ?bar
