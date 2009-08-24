@@ -292,9 +292,9 @@ instance (Show p, Show t, Show f) => Show (If p t f) where
     showsPrec p (F proof f) = showParen (p > 10) (showString "F _ " . showsPrec 11 f)
 
 min :: Nat a -> Nat b -> If (LT a b) (Nat a) (Nat b)
-min Zero  Zero    = F (error "impossible proof") Zero
+min Zero  Zero    = F (\_ -> error "impossible proof") Zero
 min Zero (Succ _) = T ltProof Zero
-min (Succ _) Zero = F (error "impossible proof") Zero
+min (Succ _) Zero = F (\_ -> error "impossible proof") Zero
 min (Succ a) (Succ b) = case min a b of
     T ltProof  x -> T (SuccLT ltProof) (Succ x)
     F nltProof x -> F (\(SuccLT pr) -> nltProof pr) (Succ x)
