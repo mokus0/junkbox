@@ -7,7 +7,7 @@
   #-}
 module TypeSys where
 
-import Mu
+import MuClass
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.IntSet as IS

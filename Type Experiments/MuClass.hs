@@ -6,7 +6,7 @@
         ViewPatterns,
         NoMonomorphismRestriction
   #-}
-module Mu where
+module MuClass where
 
 import Control.Monad
 
