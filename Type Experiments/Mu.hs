@@ -11,6 +11,8 @@ module Mu where
 import Control.Monad
 
 newtype MuT t = Mu (t (MuT t))
+unMuT (Mu t) = t
+foldMuT f (Mu x) = f (fmap (foldMuT f) x)
 deriving instance Show (t (MuT t)) => Show (MuT t)
 deriving instance Eq   (t (MuT t)) => Eq   (MuT t)
 deriving instance Ord  (t (MuT t)) => Ord  (MuT t)
@@ -22,9 +24,9 @@ data NatS nat
     deriving (Eq, Ord, Show)
 
 instance Enum Nat where
-    toEnum 0     = mu Zero
-    toEnum (n+1) = mu (Succ (toEnum n))
-    fromEnum = foldMu fromE
+    toEnum 0     = Mu Zero
+    toEnum (n+1) = Mu (Succ (toEnum n))
+    fromEnum = foldMuT fromE
         where
             fromE Zero = 0
             fromE (Succ s) = succ $! s
@@ -36,27 +38,27 @@ zero = mu Zero
 suc s = mu (Succ s)
 inf = suc inf
 
-instance (Mu mu, Show (mu NatS), Eq (mu NatS)) => Num (mu NatS) where
-    x + y = foldMu addX y
+instance Num (MuT NatS) where
+    x + y = foldMuT addX y
         where
             addX Zero     = x
             addX (Succ y) = suc y
     
-    x                   - (unMu -> Zero)        = x
-    (unMu -> Zero)      - y                     = error "Nat.(-): negative result"
-    (unMu -> (Succ x))  - (unMu -> (Succ y))    = (x - y)
+    x                   - (unMuT -> Zero)       = x
+    (unMuT -> Zero)     - y                     = error "Nat.(-): negative result"
+    (unMuT -> (Succ x)) - (unMuT -> (Succ y))   = (x - y)
     
-    x * y = foldMu mulX y
+    x * y = foldMuT mulX y
         where
             mulX Zero     = zero
             mulX (Succ y) = x + y
     
-    abs                     = id
-    signum x@(unMu -> Zero) = x
-    signum x                = 1
+    abs                         = id
+    signum x@(unMuT -> Zero)    = x
+    signum x                    = 1
     
-    fromInteger 0           = zero
-    fromInteger (n+1)       = suc (fromInteger n)
+    fromInteger 0               = zero
+    fromInteger (n+1)           = suc (fromInteger n)
 
 data Either1 f g x
     = Left1  (f x)
@@ -73,37 +75,39 @@ either1 f g (Right1 x) = g x
 leftMu  x = mu (Left1  x)
 rightMu x = mu (Right1 x)
 
-eitherMu f g (unMu -> Left1  x) = mu (f x)
-eitherMu f g (unMu -> Right1 x) = mu (g x)
+eitherMu f g (unMuT -> Left1  x) = mu (f x)
+eitherMu f g (unMuT -> Right1 x) = mu (g x)
 
 class Mu mu where
     -- simple injection
     mu     :: Functor t => t (mu t) -> mu t
     
     -- simple extraction
-    unMu   :: Functor t => mu t -> t (mu t)
-    unMu = foldMu (fmap mu)
+    unMu   :: Functor t => mu t -> [t (mu t)]
+    -- generic instance which destroys inner structure:
+    -- unMu = foldMu (fmap mu)
     
     -- structure-ignoring reduction of the fixpointed functor
-    foldMu :: (Functor t) => (t b -> b) -> mu t -> b
-    foldMu f x = f (fmap (foldMu f) (unMu x))
+    foldMu :: (Functor t) => ([t b] -> b) -> mu t -> b
+    foldMu f x = f (map (fmap (foldMu f)) (unMu x))
     
     -- structure-preserving substitution of the fixpointed functor
-    -- (default implementation drops structure)
-    muMap :: (Functor f, Functor g) => (f (mu g) -> g (mu g)) -> mu f -> mu g
-    muMap f x = mu (f (fmap (muMap f) (unMu x)))
+    mapMu :: (Functor f, Functor g) => (f (mu g) -> g (mu g)) -> mu f -> mu g
+    -- a simple generic implementation which drops any extra structure:
+    -- mapMu f x = mu (f (fmap (mapMu f) (unMu x)))
 
 instance Mu MuT where
     mu = Mu
-    unMu (Mu x) = x
-    foldMu f (Mu x) = f (fmap (foldMu f) x)
-    muMap f (Mu x) = Mu (f (fmap (muMap f) x))
+    unMu (Mu x) = [x]
+    foldMu f (Mu x) = f [fmap (foldMu f) x]
+    mapMu f (Mu x) = Mu (f (fmap (mapMu f) x))
 
 
-muJoin :: (Monad m, Functor m, Mu mu) => mu m -> m a
-muJoin = foldMu join
 
-foldEitherMu
-  :: (Mu mu, Functor f, Functor g) =>
-     (f b -> b) -> (g b -> b) -> mu (Either1 f g) -> b
-foldEitherMu f g = foldMu (either1 f g)
+--muJoin :: (Monad m, Functor m, Mu mu) => mu m -> m a
+--muJoin = foldMu join
+
+--foldEitherMu
+--  :: (Mu mu, Functor f, Functor g) =>
+--     (f b -> b) -> (g b -> b) -> mu (Either1 f g) -> b
+--foldEitherMu f g = foldMu (either1 f g)

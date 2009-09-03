@@ -52,12 +52,14 @@ instance Ord var => Abstraction (AbsS var) var where
     extendEnv env (Let ext _) = M.unionWith shadow env ext
         where shadow = flip const
     readEnv = (M.!)
-    fv (unMu -> Var x) = S.singleton x
-    fv (unMu -> Let binds expr) = S.unions $
-        (fv expr) :
-        [ fv lhs
-        | lhs <- M.elems binds
-        ]
+    fv = S.unions . map fv' . unMu
+        where
+            fv' (Var x) = S.singleton x
+            fv' (Let binds expr) = S.unions $
+                (fv expr) :
+                [ fv lhs
+                | lhs <- M.elems binds
+                ]
 
 data DeBruijnAbsS expr
     = VarI Int
@@ -73,20 +75,48 @@ instance Abstraction DeBruijnAbsS Int where
     extendEnv env (VarI _) = env
     extendEnv env (LetI expr) = expr : env
     readEnv = (!!)
-    fv (unMu -> VarI i) = IS.singleton i
-    fv (unMu -> LetI e) = IS.map pred (fv e)
+    fv = IS.unions . map fv' . unMu
+        where
+            fv' (VarI i) = IS.singleton i
+            fv' (LetI e) = IS.map pred (fv e)
 
 type Expr lit var = MuT (Expr_ (ConS lit) (AbsS var))
+
 newtype AbsView con abs = AbsView (MuT (Expr_ con abs))
+unAbsView (AbsView x) = x
+deriving instance 
+    ( Eq (con (MuT (Expr_ con abs)))
+    , Eq (abs (MuT (Expr_ con abs)))
+    ) => Eq (AbsView con abs)
+deriving instance 
+    ( Show (con (MuT (Expr_ con abs)))
+    , Show (abs (MuT (Expr_ con abs)))
+    ) => Show (AbsView con abs)
+
 newtype ConView abs con = ConView (MuT (Expr_ con abs))
+unConView (ConView x) = x
+deriving instance 
+    ( Eq (con (MuT (Expr_ con abs)))
+    , Eq (abs (MuT (Expr_ con abs)))
+    ) => Eq (ConView abs con)
+deriving instance 
+    ( Show (con (MuT (Expr_ con abs)))
+    , Show (abs (MuT (Expr_ con abs)))
+    ) => Show (ConView abs con)
 
 instance Functor con => Mu (AbsView con) where
-    mu abs__AbsView_abs = absView_abs
+    mu = AbsView . Mu . A . fmap unAbsView
+    unMu = unA . unMuT . unAbsView
         where
-            absView_abs = undefined -- AbsView (Mu (A (fmap (foldMu mu) abs__AbsView_abs)))
-    unMu absView_t = t__AbsView_t
-        where
-            t__AbsView_t = undefined
+            unA (A a) = [fmap AbsView a]
+            unA (C c) = undefined
+                    where
+                        _ = (c `asTypeOf` (undefined :: con (MuT (Expr_ con abs))))
+                    
+             --undefined
     {- ??? -}
 instance Mu (ConView abs) where
+    mu = ConView . Mu . C . fmap unConView
     {- ??? -}
+    
+muMap2 f (Mu x) = mu (f (fmap (muMap2 f) x))
