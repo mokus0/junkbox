@@ -10,9 +10,11 @@ module MuClass where
 
 import Control.Monad
 
+-- the "one true mu"
 newtype MuT t = Mu (t (MuT t))
 unMuT (Mu t) = t
 foldMuT f (Mu x) = f (fmap (foldMuT f) x)
+mapMuT f (Mu x) = mu (f (fmap (mapMuT f) x))
 deriving instance Show (t (MuT t)) => Show (MuT t)
 deriving instance Eq   (t (MuT t)) => Eq   (MuT t)
 deriving instance Ord  (t (MuT t)) => Ord  (MuT t)
@@ -84,8 +86,7 @@ class Mu mu where
     
     -- simple extraction
     unMu   :: Functor t => mu t -> [t (mu t)]
-    -- generic instance which destroys inner structure:
-    -- unMu = foldMu (fmap mu)
+    -- consider replacing [] with a "characteristic monad" type family?
     
     -- structure-ignoring reduction of the fixpointed functor
     foldMu :: (Functor t) => ([t b] -> b) -> mu t -> b
@@ -93,8 +94,6 @@ class Mu mu where
     
     -- structure-preserving substitution of the fixpointed functor
     mapMu :: (Functor f, Functor g) => (f (mu g) -> g (mu g)) -> mu f -> mu g
-    -- a simple generic implementation which drops any extra structure:
-    -- mapMu f x = mu (f (fmap (mapMu f) (unMu x)))
 
 instance Mu MuT where
     mu = Mu

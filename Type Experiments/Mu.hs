@@ -34,6 +34,9 @@ either1 f g (Right1 x) = g x
 leftMu  x = Mu (Left1  x)
 rightMu x = Mu (Right1 x)
 
+eitherMu :: (f (Mu (Either1 f g)) -> h (Mu h))
+         -> (g (Mu (Either1 f g)) -> h (Mu h))
+         -> Mu (Either1 f g) -> Mu h
 eitherMu f g (Mu (Left1  x)) = Mu (f x)
 eitherMu f g (Mu (Right1 x)) = Mu (g x)
 

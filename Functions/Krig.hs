@@ -7,6 +7,7 @@ import Control.Monad.ST
 import Data.Matrix.Types
 import Data.Matrix.Mutable
 import Data.Matrix.Alias
+import Data.Matrix.Math
 import Data.Matrix.Algorithms.LUDecomp
 
 import Control.Monad.ST
@@ -23,8 +24,14 @@ data Krig t = Krig
 
 type Variogram t = t -> t
 
-krig :: (Matrix mat a, Vector vec a, Floating a, Ord a)
-     => mat a -> vec a -> Variogram a -> Maybe a -> Krig a
+-- |use this in place of Nothing in the 'err' parameter to 'krig' 
+-- to help out the type inference system (nails down vec2, which 'Nothing' 
+-- leaves dangling)
+noErr :: Maybe (IVector a)
+noErr = Nothing
+
+krig :: (Matrix mat a, Vector vec a, Vector vec2 a, Floating a, Ord a)
+     => mat a -> vec a -> Variogram a -> Maybe (vec2 a) -> Krig a
 krig x yy vgram err = Krig
         { krigNPt   = npt
         , krigNDim  = ndim
@@ -38,37 +45,34 @@ krig x yy vgram err = Krig
     where
         npt   = matRows x
         ndim  = matCols x
+        
+        errsq i = fmap (\e -> indexV e i ^ 2) err
+        subErrSq i = maybe id subtract (errsq i)
+        
         y = fvector (npt + 1) (\i -> if i < npt then indexV yy i else 0)
         
         v = imatrix (npt + 1) (npt + 1) $ \i j -> case (i < npt, j < npt) of
                 (True, True)
                     | i > j     -> indexM v j i
-                    | i == j    -> vgram 0 - maybe 0 (^2) err
+                    | i == j    -> subErrSq i (vgram 0)
                     | otherwise -> vgram (dist ndim (row i x) (row j x))
                 (False, False) -> 0
                 other   -> 1
         vi = ludcmp v
         yvi = luSolveV vi y
 
-same f a b 
-    | a == b    = a
-    | otherwise = error (f ++ ": equality assertion failed (" ++ show a ++ " /= " ++ show b ++ ")")
-
-dot v1 v2 = sum' [indexV v1 i * indexV v2 i | i <- [0..n-1]]
-    where n = same "dot" (vecElems v1) (vecElems v2)
-
-row :: (Matrix mat a) => Int -> mat a -> IAlias Vec a
-row n mat = Row n (IMat mat)
-
 interp Krig{..} xstar = (estval, esterr)
     where
-        vstar = fvector (krigNPt + 1) (krigVStar xstar)
+        vstar = ivector (krigNPt + 1) (krigVStar xstar)
         estval = krigYVi `dot` vstar
         
         dstar = luSolveV krigVi vstar
         esterr = sqrt (max 0 (dstar `dot` vstar))
 
-interp_ krig xstar = fst (interp krig xstar)
+interp_ Krig{..} xstar = estval
+    where
+        vstar = fvector (krigNPt + 1) (krigVStar xstar)
+        estval = krigYVi `dot` vstar
 
 {-# INLINE powVarGram #-}
 powVarGram :: (Matrix mat a, Vector vec a, Floating a) 
@@ -95,13 +99,9 @@ powVarGram x y beta nug = \r -> addNugSq (alpha * (r ** beta))
                     ]
                 
 
-krig' x y = krig x y vgram Nothing
+krig' x y = krig x y vgram noErr
     where
         vgram = powVarGram x y 1.5 Nothing
-
-distsq_ x y = distsq n x y
-    where n = same "distsq_" (vecElems x) (vecElems y)
-
 
 dist n x1 x2 = sqrt (distsq n x1 x2)
 distsq n x y = sum'
