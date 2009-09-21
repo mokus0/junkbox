@@ -6,7 +6,7 @@
         Rank2Types
   #-}
 
-module Peano where
+module Math.Peano where
 
 data Nat = Zero | Succ Nat
         deriving (Eq, Show)

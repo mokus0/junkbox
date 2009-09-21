@@ -6,7 +6,7 @@
         ImplicitParams
   #-}
 
-module Latitude where
+module Math.Latitude where
 
 wgs84lat4m :: RealFloat a => a -> a -> a -> a
 wgs84lat4m = let ?epsilon = 4 in wgs84lat

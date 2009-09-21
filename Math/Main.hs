@@ -1,4 +1,4 @@
-module Main
+module Math.Main
 	where
 
 import IO

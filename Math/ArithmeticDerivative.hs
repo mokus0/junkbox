@@ -3,9 +3,9 @@
  -      (c) 2008 Cook, J. MR  SSD, Inc.
  -}
 
-module ArithmeticDerivative where
+module Math.ArithmeticDerivative where
 
-import Primes3
+import Math.Primes3
 import Control.Monad
 
 isPrime n = elt primes

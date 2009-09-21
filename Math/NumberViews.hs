@@ -6,7 +6,7 @@
         ViewPatterns
   #-}
 
-module NumberViews where
+module Math.NumberViews where
 
 data FloatValue a = NaN | NegativeZero | Infinity | NegativeInfinity | RealFloat a
 

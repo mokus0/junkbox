@@ -1,4 +1,4 @@
-module Moku
+module Math.Moku
   where
 
 x = 5

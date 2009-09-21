@@ -3,7 +3,7 @@
  -      (c) 2009 Cook, J. MR  SSD, Inc.
  -}
 
-module Circles where
+module Math.Circles where
 
 import Data.Complex
 

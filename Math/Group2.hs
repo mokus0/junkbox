@@ -3,7 +3,7 @@
  -      (c) 2008 James Cook
  -}
 
-module Group2 where
+module Math.Group2 where
 
 import Data.Ratio
 

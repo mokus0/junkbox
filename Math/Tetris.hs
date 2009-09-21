@@ -6,7 +6,7 @@
  -	Rough sketch of part of an idea for tetris region-tiling algorithm
  -}
 
-module Tetris where
+module Math.Tetris where
 
 import Data.Bits
 

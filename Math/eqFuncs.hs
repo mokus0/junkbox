@@ -5,7 +5,7 @@
 
 {-# OPTIONS -fglasgow-exts #-}
 
-module EqFuncs where
+module Math.EqFuncs where
 
 import Prelude hiding (catch)
 import Control.Exception (catch)

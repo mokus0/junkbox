@@ -3,7 +3,7 @@
  -      (c) 2008 Cook, J. MR  SSD, Inc.
  -}
 
-module Primes3 where
+module Math.Primes3 where
 
 merge (x:xs) (y:ys) = case x `compare` y of
         LT      -> x : merge    xs (y:ys)

@@ -1,4 +1,4 @@
-module NumericalConstraint where
+module Math.NumericalConstraint where
 
 data Expr a b =
 	  Var b

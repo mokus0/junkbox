@@ -3,7 +3,7 @@
  -	(c) 2007 James Cook
  -}
 
-module Fib where
+module Math.Fib where
 
 -- I would like to create a program to take a haskell definition, e.g.:
     -- fib = 1 : 1 : zipWith (+) fib (tail fib)

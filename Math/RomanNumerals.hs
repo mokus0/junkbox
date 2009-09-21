@@ -3,7 +3,7 @@
  -      (c) 2008 James Cook
  -}
 
-module RomanNumerals where
+module Math.RomanNumerals where
 
 import Text.ParserCombinators.Parsec
 

@@ -6,7 +6,7 @@
     ImplicitParams
   #-}
 
-module Main where
+module Math.Main where
 
 import Test.QuickCheck
 import Control.Parallel

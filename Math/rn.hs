@@ -1,4 +1,4 @@
-module RN where
+module Math.RN where
 
 data Digit = M | D | C | L | X | V | I
 data Numeral = RN [Digit]

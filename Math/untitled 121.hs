@@ -4,7 +4,7 @@
  -	(c) 2007 James Cook
  -}
 
-module Untitled where
+module Math.Untitled where
 import Data.List
 import qualified Data.Map as M
 

@@ -4,7 +4,7 @@
  -	(c) 2007 James Cook
  -}
 
-module Fac where
+module Math.Fac where
 
 -- static Peano constructors and numerals
 

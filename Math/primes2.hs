@@ -1,7 +1,7 @@
 
 -- Early haskell experimentation, with some later updates.
 
-module Main where
+module Math.Main where
 
 import System
 

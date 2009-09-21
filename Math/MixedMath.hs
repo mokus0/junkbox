@@ -8,7 +8,7 @@
         FlexibleInstances
   #-}
 
-module MixedMath where
+module Math.MixedMath where
 
 import Prelude hiding ((+))
 import qualified Prelude as P

@@ -12,7 +12,7 @@
  -}
 
 
-module Main where
+module Math.Main where
 
 prodDigits base xs = (prodDigitsE xs) / (log base) 
 prodDigitsE xs = foldl (\x y -> x + log y) 0 xs

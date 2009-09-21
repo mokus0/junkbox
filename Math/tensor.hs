@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs, KindSignatures, TypeFamilies #-}
-module Tensor where
+module Math.Tensor where
 
 newtype Identity t = Identity t
 newtype Compose f g t = Compose (f (g t))
