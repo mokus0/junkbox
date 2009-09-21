@@ -1,5 +1,5 @@
 {-# LANGUAGE ViewPatterns, RankNTypes #-}
-module TypeExperiments.FixedFloating where
+module Math.FixedFloating where
 
 import TypeExperiments.WithResolution
 import Data.Fixed
