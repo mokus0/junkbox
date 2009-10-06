@@ -59,7 +59,6 @@ krig x yy vgram err = Krig
                 let vgram_ij = vgram (row i x) (row j x)  -- or?: vgram (row j x) (row i x)
                 in case (i < npt, j < npt) of
                     (True, True)
-                        | i > j     -> indexM v j i
                         | i == j    -> subErrSq i vgram_ij
                         | otherwise -> vgram_ij
                     (False, False) -> 0
@@ -103,7 +102,7 @@ powVarGram x y beta nug = distVGram $ \r -> addNugSq (alpha * (r ** beta))
                     , let rb = distsq ndim (row i x) (row j x) ** (0.5 * beta)
                           dy = indexV y i - indexV y j
                     ]
-                
+
 krig' :: (Matrix mat Double, Vector vec Double) =>
      mat Double -> vec Double -> Krig Double
 krig' x y = krig x y vgram noErr
