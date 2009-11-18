@@ -35,7 +35,7 @@ instance Monad Fold where
     x >>= f = concat (fmap f x)
 
 head (Fold x) = x (\x _ -> Just x) Nothing -- (error "head: empty list")
-tail (Fold x) = Fold (\cons nil -> x (\e r f -> f (cons e (r f)) (r true)) (\f -> f nil (error "tail: empty list")) false)
+tail (Fold x) = Fold (\cons nil -> x (\e r f -> f (cons e (r f)) (r true)) (\f -> f nil (error "tail: empty list ")) false)
 
 false t f = f
 true  t f = t

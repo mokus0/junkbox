@@ -12,6 +12,10 @@ import Control.Monad.Instances
 -- some experiments with monads, to test my understanding...
 -- a simple lambda-calculator:
 
+-- "primed" variable names, used to handle variable name clash in a
+-- type-natural way (whenever a name is shadowed, the hidden one
+-- gets "primed" with the S constructor... i think... this comment
+-- was written long after the original code)
 data Prime k 
         = Z k
         | S (Prime k)
