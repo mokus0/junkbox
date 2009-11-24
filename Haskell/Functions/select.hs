@@ -13,12 +13,13 @@ permuteBy select []     = return []
 permuteBy select xs     = [(y:zs) | (y, ys) <- select xs
                                   , zs <- permuteBy select ys]
 
-permuteBy2 select xs    = do
-        (y, ys) <- select xs
-        zs <- if null ys then [[]] else permuteBy2 select ys
-        return (y:zs)
-
-        
+permuteBy2 select = go
+    where
+        go [] = return []
+        go xs = do
+            (y, ys) <- select xs
+            zs <- go ys
+            return (y:zs)
 
 permuteBy3 select xs = select xs >>= \ (y, ys) -> if null ys
                 then [[]] else permuteBy3 select ys >>= \ zs -> return (y :
