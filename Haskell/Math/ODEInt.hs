@@ -219,8 +219,8 @@ erf x1 = min 1 . max (-1) . runST $ do
         ys0 = [0]
         derivs x [y] = [(2 / sqrt pi) * exp (negate (x^2))]
         
-        atol = [1e-37]
-        rtol = [1e-19]
+        atol = [1e-12]
+        rtol = [1e-12]
     stepper <- stepperDopr5 (errorNorm atol rtol)
     ((nok, nbad), steps) <- integrate defaultIntegrationSettings stepper h0 (x0,ys0) x1 derivs
     
@@ -236,8 +236,8 @@ erfc x1 = runST $ do
         ys0 = [1]
         derivs x [y] = [((-2) / sqrt pi) * exp (negate (x^2))]
         
-        atol = [1e-37]
-        rtol = [1e-19]
+        atol = [1e-12]
+        rtol = [1e-12]
     stepper <- stepperDopr5 (errorNorm atol rtol)
     ((nok, nbad), steps) <- integrate defaultIntegrationSettings stepper h0 (x0,ys0) x1 derivs
     
@@ -262,3 +262,5 @@ test2' h0 (x0, ys0) = runST $ do
     return [ (a, b, from step,  to step,  hUsed step)
            , (c, d, from step2, to step2, hUsed step2)
            ]
+
+
