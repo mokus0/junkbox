@@ -7,6 +7,7 @@
 module Math.Untitled where
 import Data.List
 import qualified Data.Map as M
+import Data.Ratio
 
 f x
 	| x <= 1	= x
@@ -112,4 +113,16 @@ fc seen x n d = case quotRem n d of
 			where seen' = M.insert r x seen
 	
 	--if seen then ... else fcycle r d
-	
+
+
+mediant x y = (a+b) % (c+d)
+    where
+        a = numerator x
+        b = numerator y
+        c = denominator x
+        d = denominator y
+
+fractions = map fromRational $ concat (iterate between [])
+    where
+        between xs = zipWith mediant xs' (tail xs')
+            where xs' = 0 : xs ++ [1]
