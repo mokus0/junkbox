@@ -1,8 +1,5 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, BangPatterns #-}
 module GSL.Cheb where
-
-import Control.Monad.ST
-import Data.STRef
 
 class Eps a where
     eps :: a
@@ -10,40 +7,26 @@ class Eps a where
 instance Eps Double where
     eps = 2.2204460492503131e-16
 
+-- A computed result with an error estimate
 data Result a e = Result
     { val :: a
     , err :: e
     } deriving (Eq, Ord, Show)
-
 
 data ChebSeries a = ChebSeries
     { chebCoeffs    :: [a]
     , chebOrder     :: Int
     , chebA         :: a
     , chebB         :: a
-    }
+    } deriving (Eq, Show)
 
-cheb_eval_e ChebSeries{..} x = runST $ do
-    d  <- newSTRef (0,0,0)
-    
-    let y   = (2 * x - chebA - chebB) / (chebB - chebA)
+cheb_eval_e ChebSeries{..} x = step chebOrder 0 0 0
+    where
+        y   = (2 * x - chebA - chebB) / (chebB - chebA)
         y2  = 2 * y
-    
-    sequence_
-        [ modifySTRef d $ \(d,dd,e) -> 
-            ( y2*d - dd + (chebCoeffs !! j)
-            , d
-            , e + abs (y2 * d) + abs dd + abs (chebCoeffs !! j)
-            )
-            
-        | j <- [chebOrder, chebOrder - 1 .. 1]
-        ]
-    
-    modifySTRef d $ \(d,dd,e) -> 
-        ( y*d - dd + 0.5 * (chebCoeffs !! 0)
-        , dd
-        , e + abs (y * d) + abs dd + 0.5 * abs (chebCoeffs !! 0)
-        )
-    
-    (d,dd,e) <- readSTRef d
-    return (Result d (eps * e + abs (chebCoeffs !! chebOrder)))
+        
+        step !j !d !dd !e 
+            | j > 0     = step (j-1) (y2*d - dd +       (chebCoeffs !! j)) d (e + abs (y2 * d) + abs dd +       abs (chebCoeffs !! j))
+            | otherwise = finish     (y *d - dd + 0.5 * (chebCoeffs !! 0))   (e + abs (y  * d) + abs dd + 0.5 * abs (chebCoeffs !! 0))
+        
+        finish !d !e = Result d (eps * e + abs (chebCoeffs !! chebOrder))
