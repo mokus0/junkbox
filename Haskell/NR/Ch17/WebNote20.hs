@@ -1,12 +1,17 @@
 {-# LANGUAGE RecordWildCards, NoMonomorphismRestriction, ParallelListComp, 
     ForeignFunctionInterface, ViewPatterns #-}
-module Math.Dopr853 where
+module NR.Ch17.WebNote20
+    ( errorNorm853, stepperDopr853
+    ) where
 
 import Control.Monad.ST
 import Data.List
 import Data.STRef
-import Math.ODEInt hiding (erf, erfc, c_erf, c_erfc, erfTest)
+import NR.Ch17.S0
 
+vadd v1 v2 = zipWith (+) v1 v2
+vscale s v = map (s*) v
+vdot v1 v2 = foldl' (+) 0 (zipWith (*) v1 v2)
 vsub v1 v2 = zipWith (-) v1 v2
 
 errorNorm853 atols rtols h ys newYs delta1 delta2 = abs h * err1 * sqrt (recip (n * deno))
@@ -347,59 +352,4 @@ d713 = -0.43533456590011143754432175058e+02
 d714 =  0.96324553959188282948394950600e+02
 d715 = -0.39177261675615439165231486172e+02
 d716 = -0.14972683625798562581422125276e+03
-
-
--- some tests
-erf x1 | abs x1 > 6     = signum x1
-erf x1 = min 1 . max (-1) . runST $ do
-    let h0 = signum (x1 - x0)
-        x0 = 0
-        ys0 = [0]
-        derivs x [y] = [(2 / sqrt pi) * exp (negate (x^2))]
-        
-        atol = [1e-12]
-        rtol = [1e-12]
-    stepper <- stepperDopr853 (errorNorm853 atol rtol)
-    ((nok, nbad), steps) <- integrate defaultIntegrationSettings stepper h0 (x0,ys0) x1 derivs
-    
-    let (outX, [outY]) = to (last steps)
-    
-    return $ if outX == x1
-        then outY
-        else error ("erf: did not integrate all the way to x: " ++ show (map sparse steps))
-
--- this erfc is not really satisfactory.  I just can't get
--- the integrator to put out a function with the required dynamic range.
--- there may be some reparameterization that would work - intuitively it
--- seems to me that the problem is that very long stretches have many 
--- infinitesimal steps (the integrator can't leap through these regions 
--- because they defy taylor series expansion).  Those steps are, beyond
--- some point, always smaller than the epsilon for the current value of
--- the integrand, and so the function hits a constant point and stays 
--- there.  Some kind of an exponential or hyperexponential 
--- reparameterization of x may be enough to allow the many steps to have
--- large enough derivatives to make progress through the same regions,
--- even if not putting the function in a form suitable for larger steps.
-erfc x | x <= 5 = 1 - erf x
-erfc x1 = runST $ do
-    let h0 = signum (x1 - x0)
-        x0 = 10
-        ys0 = [c_erfc x0]
-        derivs x [y] = [((-2) / sqrt pi) * exp (negate (x^2))]
-        
-        atol = [1e-100]
-        rtol = [1e-12]
-    stepper <- stepperDopr853 (errorNorm853 atol rtol)
-    ((nok, nbad), steps) <- integrate defaultIntegrationSettings stepper h0 (x0,ys0) x1 derivs
-    
-    let (outX, [outY]) = to (last steps)
-    
-    return $ if outX == x1
-        then outY
-        else error ("erfc: did not integrate all the way to x: " ++ show (map sparse steps))
-
-foreign import ccall "math.h erf" c_erf :: Double -> Double
-foreign import ccall "math.h erfc" c_erfc :: Double -> Double
-
-erfTest x = erf x / c_erf x - 1
 
