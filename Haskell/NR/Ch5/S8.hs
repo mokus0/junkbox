@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards, BangPatterns, FlexibleContexts #-}
+-- |Fitting and evaluating Chebyshev polynomials
 module NR.Ch5.S8 where
 
 import Data.Vector.Generic (Vector, generate, (!))

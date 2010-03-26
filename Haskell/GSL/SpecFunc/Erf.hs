@@ -1,4 +1,24 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
+-- GSL.SpecFunc.Erf - translated from specfunc/erfc.c in GSL sources.
+-- Original header from specfunc/erfc.c follows.
+
+-- specfunc/erfc.c
+-- 
+-- Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003 Gerard Jungman
+-- 
+-- This program is free software; you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation; either version 3 of the License, or (at
+-- your option) any later version.
+-- 
+-- This program is distributed in the hope that it will be useful, but
+-- WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+-- General Public License for more details.
+-- 
+-- You should have received a copy of the GNU General Public License
+-- along with this program; if not, write to the Free Software
+-- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 module GSL.SpecFunc.Erf (erf, erfc) where
 
 import GSL.Cheb
@@ -54,7 +74,7 @@ erfc_e x = wrap estimate
                     Result cval cerr = cheb_eval_e erfc_x510_cs t
                 in Result (exterm * cval) (exterm * (cerr + 2 * abs x * eps + eps))
             | otherwise = 
-                let e_val = erfc8 x
+                let e_val = erfc8 ax
                 in Result e_val ((x*x + 1) * eps * abs e_val)
         wrap (Result v e)
             | x < 0     = Result (2 - v) (e + 2 * eps * abs v)

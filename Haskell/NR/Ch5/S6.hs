@@ -1,3 +1,4 @@
+-- |Solving simple quadratic and cubic equations
 module NR.Ch5.S6 
     ( quadratic, complexQuadratic
     ) where
