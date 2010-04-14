@@ -3,7 +3,7 @@
  -      (c) 2008 Cook, J. MR  SSD, Inc.
  -}
 
-module Trim where
+module Functions.Trim where
 import Debug.Trace
 
 -- simple test cases
