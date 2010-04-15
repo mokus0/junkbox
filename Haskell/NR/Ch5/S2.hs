@@ -32,6 +32,19 @@ asGCF :: Num a => CF a -> [(a,a)]
 asGCF (CF   cf) = [(b, 1) | b <- cf]
 asGCF (GCF gcf) = gcf
 
+cfNull (CF  xs) = null xs
+cfNull (GCF xs) = null xs
+cfHead (CF  xs) = Left  $! head xs
+cfHead (GCF xs) = Right $! head xs
+cfTail (CF  xs) = CF  $! tail xs
+cfTail (GCF xs) = GCF $! tail xs
+cfNil = CF []
+cfCons (Left  x) (CF  xs) = CF  (x:xs)
+cfCons (Left  x) (GCF xs) = GCF ((x,1) : xs)
+cfCons (Right x) (CF  xs) = GCF (x : [(b,1) | b <- xs])
+cfCons (Right x) (GCF xs) = GCF (x:xs)
+gcfFoldr cons nil (CF  xs) = foldr (uncurry cons) nil (map (\b -> (b,1))  xs)
+gcfFoldr cons nil (GCF xs) = foldr (uncurry cons) nil xs
 
 {--------------- Machinery for expanding continued fractions ---------------}
 
