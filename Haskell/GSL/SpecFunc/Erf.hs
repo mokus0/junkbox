@@ -21,6 +21,7 @@
 -- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 module GSL.SpecFunc.Erf (erf, erfc) where
 
+import NR.Ch5.S1
 import GSL.Cheb
 
 -- Translation into Haskell of GSL's erf and related functions - eventually
@@ -86,16 +87,18 @@ erfc8 x = erfc8_sum x * exp (negate x * x)
 -- |estimates erfc(x) valid for 8 < x < 100
 -- This is based on index 5725 in Hart et al
 erfc8_sum :: Double -> Double
-erfc8_sum x = num / den
+erfc8_sum x = evalPoly p x / evalPoly q x
     where
-        p = [ 2.97886562639399288862
+        p = polyLE
+            [ 2.97886562639399288862
             , 7.409740605964741794425
             , 6.1602098531096305440906
             , 5.019049726784267463450058
             , 1.275366644729965952479585264
             , 0.5641895835477550741253201704
             ]
-        q = [ 3.3690752069827527677
+        q = polyLE
+            [ 3.3690752069827527677
             , 9.608965327192787870698
             , 17.08144074746600431571095
             , 12.0489519278551290360340491
@@ -103,13 +106,6 @@ erfc8_sum x = num / den
             , 2.260528520767326969591866945
             , 1.0
             ]
-        num = poly p x
-        den = poly q x
-
-poly p x = go p
-    where
-        go []       = 0
-        go (c:cs)   = c + x * go cs 
 
 erfc_xlt1_cs = ChebSeries
     { chebCoeffs    = 
