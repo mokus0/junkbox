@@ -54,9 +54,11 @@ cheb f chebOrder chebA chebB = Chebyshev{..}
                         fac * V.sum (generate' n $ \k -> (fk!k) * cos (pi * fromIntegral j * (fromIntegral k + 0.5) / fromIntegral n))
         chebTruncErr = Nothing
 
+-- |Evaluate a Chebyshev polynomial
 chebEval :: (Real a, Fractional b, Vector v b) => Chebyshev v a b -> a -> b
 chebEval c = chebEvalM (chebOrder c) c
 
+-- |Evaluate the m-term truncation of a Chebyshev polynomial
 chebEvalM :: (Real a, Fractional b, Vector v b) => Int -> Chebyshev v a b -> a -> b
 chebEvalM order Chebyshev{..} x = go order 0 0 
     where

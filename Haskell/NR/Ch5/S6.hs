@@ -3,6 +3,7 @@ module NR.Ch5.S6
     ( quadratic, complexQuadratic
     ) where
 
+import NR.Ch5.S1
 import Data.Complex
 
 linear 0 b = []
@@ -48,16 +49,10 @@ complexCubic = error "complexCubic: write me!"
 
 -- a few sanity tests
 
--- evaluate a polynomial, const coeff first
-evalPoly p x = go p
+isZero abs coeffs x = abs y / big < 1e-14
     where
-        go []       = 0
-        go (c:cs)   = c + x * go cs
-
-isZero abs p x = abs y / big < 1e-14
-    where
-        y = evalPoly p x
-        big = sum (map abs p) ^ 2
+        y = evalPoly (polyLE coeffs) x
+        big = sum (map abs coeffs) ^ 2
 
 realQuadratic_test    a b c = all (isZero abs       [c,b,a]) (quadratic        a b c)
 complexQuadratic_test a b c = all (isZero magnitude [c,b,a]) (complexQuadratic a b c)
