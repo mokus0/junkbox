@@ -16,6 +16,12 @@ import qualified Data.Vector.Generic as GV
 import Control.Monad.ST
 import Text.PrettyPrint
 
+instance Num a => Num (Poly a) where
+    fromInteger x = polyLE [fromInteger x]
+    (+) = addPoly
+    negate = negatePoly
+    (*) = multPoly
+
 -- |Make a Poly from a Little-Endian list of coefficients (head is const term)
 polyLE cs = PolyLE (dropEnd (0==) cs)
 polyCoeffsLE (PolyLE cs) = cs

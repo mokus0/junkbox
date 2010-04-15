@@ -72,4 +72,23 @@ chebEvalM order Chebyshev{..} x = go order 0 0
         a = realToFrac chebA
         b = realToFrac chebB
     
+
+chebEvalWith :: (Num a, Vector v a) => (a -> a -> a) -> Chebyshev v a a -> a -> a
+chebEvalWith (/) c = chebEvalMWith (/) (chebOrder c) c
+    
+-- |Evaluate the m-term truncation of a Chebyshev polynomial with a user-provided
+-- division operator.
+chebEvalMWith :: (Num a, Vector v a) => (a -> a -> a) -> Int -> Chebyshev v a a -> a -> a
+chebEvalMWith (/) order Chebyshev{..} x = go order 0 0 
+    where
+        go !j !dd !d
+            | j > 0     = go (j-1) d (y2*d - dd + (chebCoeffs!j))
+            | otherwise = y * d - dd + (chebCoeffs!0) / 2
+        
+        y  = (2 * x - a - b) / (b - a)
+        y2 = 2 * y
+        
+        a = chebA
+        b = chebB
+    
     
