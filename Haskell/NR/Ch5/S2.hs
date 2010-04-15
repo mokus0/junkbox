@@ -22,11 +22,14 @@ instance Functor CF where
 
 asCF  :: Fractional a => CF a -> [a]
 asCF (CF   cf) = cf
--- TODO: extend to finite case if possible
+asCF (GCF [(b0,a1)]) = [b0, recip a1 - 1]
 asCF (GCF ((b0,a1):(b1,a2):rest)) = go b0 b1 a1 a2 rest
-    where go b0 b1 a1 a2 ((b2,a3):rest) = b0 : go (b1*s) b2 (a2*s) a3 rest
-            where
-                s = recip a1
+    where 
+        end b0 a1 = [b0, recip a1 - 1]
+        go  b0 b1 a1 a2 gcf = b0 : case gcf of
+            []              -> end (b1*s)    (a2*s)
+            ((b2,a3):rest)  -> go  (b1*s) b2 (a2*s) a3 rest
+            where s = recip a1
 
 asGCF :: Num a => CF a -> [(a,a)]
 asGCF (CF   cf) = [(b, 1) | b <- cf]
@@ -43,8 +46,8 @@ cfCons (Left  x) (CF  xs) = CF  (x:xs)
 cfCons (Left  x) (GCF xs) = GCF ((x,1) : xs)
 cfCons (Right x) (CF  xs) = GCF (x : [(b,1) | b <- xs])
 cfCons (Right x) (GCF xs) = GCF (x:xs)
-gcfFoldr cons nil (CF  xs) = foldr (uncurry cons) nil (map (\b -> (b,1))  xs)
-gcfFoldr cons nil (GCF xs) = foldr (uncurry cons) nil xs
+gcfFoldr cons nil xs = foldr (uncurry cons) nil (asGCF xs)
+cfFoldr  cons nil xs = foldr cons nil (asCF xs)
 
 {--------------- Machinery for expanding continued fractions ---------------}
 
@@ -95,8 +98,18 @@ expandInPlace (asGCF -> gcf) = go (realToFrac b0) 1 1 0 as (tail bs)
                     aa = b * aa_j + a * aa_jm1
                     bb = b        + a * bb_jm1
                     r_bb = recip bb
+        
+        go aa_j aa_jm1 1 bb_jm1 [a_j] [] = aa / bb
+                where
+                    a = realToFrac a_j
+                    
+                    aa = aa_j + a * aa_jm1
+                    bb = 1    + a * bb_jm1
 
--- does *not* work in fixed point
+-- Does *not* work in fixed point.  Set tiny = 0 only if you want the method to fail
+-- if it encounters a divide-by-zero.  You probably do if using a finite CF, because
+-- without an infinite sequence it's likely to fail to converge if it gets thrown off
+-- by a 0.  Typical value for tiny is 1e-30.
 expandInPlaceCD tiny eps (asGCF -> ((0,a1):rest)) = a1 / expandInPlaceCD tiny eps (GCF rest)
 expandInPlaceCD tiny eps (asGCF -> gcf) = go b0 0 b0 as (tail bs)
     where
@@ -110,10 +123,17 @@ expandInPlaceCD tiny eps (asGCF -> gcf) = go b0 0 b0 as (tail bs)
                 d_j = recip' (b_j + a_j * d_jm1)
                 delt = c_j * d_j
                 f_j = f_jm1 * delt
-                
-                big = recip tiny
-                recip' x@0 = big * signum x
-                recip' x = recip x
-                
-                x // y@0 = x * big * signum y
-                x // y = x / y
+        
+        go c_jm1 d_jm1 f_jm1 [a_j] [] = f_jm1 * c_j * d_j
+            where
+                -- TODO: check for divide-by-zero in this last case and
+                -- if it occurs, fail or use previous?
+                c_j = 1 + a_j // c_jm1
+                d_j = recip' (1 + a_j * d_jm1)
+
+        big = recip tiny
+        recip' x@0 = big * signum x
+        recip' x = recip x
+        
+        x // y@0 = x * big * signum y
+        x // y = x / y
