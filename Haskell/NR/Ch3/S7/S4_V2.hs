@@ -4,11 +4,9 @@
 module NR.Ch3.S7.S4_V2 where
 
 import Control.Monad.ST
-import Data.Matrix.Types
-import Data.Matrix.Mutable
-import Data.Matrix.Alias
-import Data.Matrix.Math
-import Data.Matrix.Algorithms.LUDecomp
+import NR.Ch1.S4
+import NR.Ch1.S4.Alias
+import NR.Ch2.S3
 
 import Control.Monad.ST
 import Data.StateRef

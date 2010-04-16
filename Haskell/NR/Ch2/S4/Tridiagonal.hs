@@ -17,7 +17,6 @@ import NR.Ch1.S4
 import Data.List
 
 -- test case
--- import Data.Matrix.Math
 -- type T = Rational
 -- a = [2,3,5,7,11]
 -- b = [13,17,19,23,29]
@@ -115,7 +114,7 @@ backsub gam u = x
             else indexV u i - indexV gam (i+1) * indexV x (i+1)
 
 
--- opposite of the normalization in Data.Matrix.Algorithms.LUDecomp.
+-- opposite of the normalization in NR.Ch2.S3.
 -- L consists of A on the sub-diagonal and Beta on the diagonal.
 -- U consists of 1 on the diagonal and Gamma on the super-diagonal
 
