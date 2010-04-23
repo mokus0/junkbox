@@ -5,6 +5,7 @@ module NR.Ch5.S1
     , quotRemPoly, quotPoly, remPoly
     , evalPoly, evalPolyDeriv, evalPolyDerivs
     , polDivMon
+    , prettyPoly, prettyPolyWith, prettyTerm
     ) where
 
 import Data.List
