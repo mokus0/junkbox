@@ -27,6 +27,9 @@ qgaus func a b = go xs ws 0
 data GaussQ v a = GaussQ {abscissas :: v a, weights :: v a }
     deriving (Eq, Show)
 
+-- |Apply a Gaussian quadrature rule to a function.  The endpoints of integration
+-- are a property of the rule - typically, they were supplied to the function
+-- (such as 'gauleg' below) that computed the parameters for the rule.
 integrate GaussQ{..} f = sum [w * f x | x <- V.toList abscissas | w <- V.toList weights]
 
 -- |Given the lower and upper limits of integration, number of points n, and
