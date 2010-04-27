@@ -4,12 +4,12 @@ module NR.Ch4.S2 where
 import Control.Monad.ST
 import Data.Bits
 
-trapzd f a b = go 1 (0.5 * (b - a) * (f a + f b))
+trapzd f a b = go 0 (0.5 * (b - a) * (f a + f b))
     where
         go !n !s = s : go (n+1) (0.5 * (s + dx * sum ys))
             where
-                iters = bit (n-1) :: Int
-                dx = (b-a) / fromIntegral iters
+                iters = bit n :: Int
+                dx = (b - a) / fromIntegral iters
                 x0 = a + 0.5 * dx
                 ys = take iters [f x | x <- iterate (+dx) x0]
 
@@ -23,8 +23,11 @@ qsimp f a b eps = qconv "qsimp" 5 20 eps (simp f a b)
 -- general-purpose warm-start convergence test
 qconv loc jstart jmax eps = converge jstart . drop (jstart-1)
     where
+        err = error (loc ++ ": too many steps")
+        
         converge j (x1:xs@(x2:_)) 
-            | j >= jmax                     = error (loc ++ ": too many steps")
+            | j >= jmax                     = err
             | x1 == 0                       = 0
             | abs (x1-x2) <= eps * abs x1   = x2
             | otherwise                     = converge (j+1) xs
+        converge _ _ = err

@@ -12,6 +12,7 @@ import Data.STRef
 
 polyInterp table m = Interp table m polyRawInterp
 
+-- NB: this algorithm works for either ascending or descending ordered abscissas
 polyRawInterp v j x = runST $ do
     -- Initialize c and d arrays to Y values
     c <- MV.new mm
