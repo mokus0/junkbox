@@ -1,11 +1,20 @@
-{-# LANGUAGE FlexibleContexts, RecordWildCards, ParallelListComp #-}
+{-# LANGUAGE 
+        StandaloneDeriving,
+        FlexibleContexts,
+        UndecidableInstances,
+        RecordWildCards
+        
+  #-}
 module NR.Ch4.S6 where
 
+import Control.Arrow
 import Control.Monad.Loops
 import Control.Monad.ST
 import Data.STRef
-import qualified Data.Vector.Generic as V
+import qualified Data.Vector as V
+import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as MV
+import Math.Legendre
 
 -- |returns the integral of the function between the 2 points, by ten-point
 -- Gauss-Legendre integration.  The function is evaluated exactly 10 times
@@ -24,13 +33,18 @@ qgaus func a b = go xs ws 0
                 where dx = xr * x
 
 -- |Weights and abscissas for gaussian quadrature.
-data GaussQ v a = GaussQ {abscissas :: v a, weights :: v a }
-    deriving (Eq, Show)
+data GaussQ v a = GaussQ 
+    { gaussQRange :: !(a, a)
+    , gaussQTable :: !(v (a, a))
+    }
+
+deriving instance (Eq   a, Eq   (v (a,a))) => Eq   (GaussQ v a)
+deriving instance (Show a, Show (v (a,a))) => Show (GaussQ v a)
 
 -- |Apply a Gaussian quadrature rule to a function.  The endpoints of integration
 -- are a property of the rule - typically, they were supplied to the function
 -- (such as 'gauleg' below) that computed the parameters for the rule.
-integrate GaussQ{..} f = sum [w * f x | x <- V.toList abscissas | w <- V.toList weights]
+integrate GaussQ{..} f = sum [w * f x | (x, w) <- GV.toList gaussQTable]
 
 -- |Given the lower and upper limits of integration, number of points n, and
 -- desired accuracy eps, this routine returns a GaussQ quadrature rule containing
@@ -38,69 +52,32 @@ integrate GaussQ{..} f = sum [w * f x | x <- V.toList abscissas | w <- V.toList 
 --
 -- Typical values for eps are 1e-15 for Double, 1e-6 for Float.  The specified
 -- eps will be approximately the accuracy of the integration method as well.
-gauleg x1 x2 n eps = runST $ do
-    x <- MV.newWith n 0
-    w <- MV.newWith n 0
-    
-    let -- the roots are symmetric in the interval so we only have to find 'm' of them
-        m = (n + 1) `div` 2
-        xm = 0.5*(x2+x1)
-        xl = 0.5*(x2-x1)
-    
-    -- Loop over the desired roots
-    sequence_
-        [ do
-            -- starting with this approximation to the ith root, enter main loop of
-            -- refinement by Newton's method
-            z  <- newSTRef . realToFrac $ cos (pi * (fromIntegral i + 0.75) / (fromIntegral n + 0.5))
-            z1 <- newSTRef undefined
-            pp <- newSTRef undefined
-            
-            let improve = do
-                    p1 <- newSTRef 1
-                    p2 <- newSTRef 0
-                    z' <- readSTRef z
-                    sequence_
-                        [ do
-                            -- loop up the recurrence relation to get the
-                            -- Legendre polynomial evaluated at z
-                            p3' <- readSTRef p2
-                            p2' <- readSTRef p1
-                            writeSTRef p2 p2'
-                            let p1' = ((2 * fromIntegral j + 1) * z' * p2' - fromIntegral j * p3') / (fromIntegral j + 1)
-                            writeSTRef p1 p1'
-                            
-                        | j <- [0..n-1]
-                        ]
-                    -- p1 is now the desired Legendre polynomial.  We next compute pp, its derivative,
-                    -- by a standard relation involving also p2, the polynomial of one lower order.
-                    p1 <- readSTRef p1
-                    p2 <- readSTRef p2
-                    let pp' = fromIntegral n * (z' * p1 - p2) / (z'*z' - 1)
-                    writeSTRef pp pp'
-                    
-                    writeSTRef z1 z'
-                    writeSTRef z (z' - p1/pp')
-                converged = do
-                    z  <- readSTRef z
-                    z1 <- readSTRef z1
-                    -- return (abs (z - z1) <= eps)
-                    return (abs (z-z1) < eps)
-            
-            improve `untilM` converged
-            
-            z <- readSTRef z
-            pp <- readSTRef pp
-            let i' = n-1-i
-            MV.write x i  (xm - xl * z)
-            MV.write x i' (xm + xl * z)
-            let w_i = 2 * xl / ((1 - z*z)*pp*pp)
-            MV.write w i  w_i
-            MV.write w i' w_i
-            
-        | i <- [0 .. m-1]
-        ]
-    
-    abscissas <- V.unsafeFreeze x
-    weights   <- V.unsafeFreeze w
-    return GaussQ{..}
+gauleg x1 x2 n eps = GaussQ (x1, x2) table
+    where
+        table = flip GV.map roots $ \(z,dy) ->
+            ( {- abscissa -}    xm + xl * z
+            , {- weight   -}    2 * xl / ((1 - z*z)*dy*dy)
+            ) where
+                xm = 0.5*(x2+x1)
+                xl = 0.5*(x2-x1)
+        
+        -- Zeroes and corresponding derivatives of the n'th Legendre polynomial.
+        -- Depends on a vector type with lazy elements, so we explicitly use V.Vector here.
+        roots = GV.map (negate *** id) mRoots GV.++ GV.reverse (GV.take (n-m) mRoots)
+            where
+                -- the roots are symmetric in the interval so we only have to find 'm' of them.
+                -- The rest are reflections.  Sign on dz should be reflected too when n is even,
+                -- but it doesn't really matter since it is going to be squared anyway.
+                m = (n + 1) `div` 2
+                mRoots = GV.generate m z
+                z i = improveRoot (z0 i)
+                
+                -- Initial guess for i'th root of the n'th Legendre polynomial
+                z0 i = realToFrac $ cos (pi * (fromIntegral i + 0.75) / (fromIntegral n + 0.5))
+                -- Improve estimate of a root by newton's method
+                improveRoot z1
+                    | abs (z2-z1) < eps = (z2, dy)
+                    | otherwise         = improveRoot z2
+                    where
+                        (y, dy) = evalLegendreDeriv n z1
+                        z2 = z1 - y/dy
