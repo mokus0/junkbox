@@ -6,17 +6,17 @@ import NR.Ch4.S2
 
 import qualified Data.Vector as V
 
-romb qrule jmax k f a b = 
+romb qrule dh jmax k f a b = 
     [ polyRawInterp (V.slice j k xys) 0 0
     | j <- [0 .. jmax-k]
     ]
     where
         ys  = qrule f a b
-        xs  = iterate (* 0.25) 1
+        xs  = iterate (* dh) 1
         xys = V.generate jmax $ \j -> zip xs ys !! j
         -- (need a V.fromListN or something)
 
-qromb f a b eps = converge (romb trapzd jmax k f a b)
+qromb f a b eps = converge (romb trapzd 0.25 jmax k f a b)
     where
         jmax = 20
         k = 5
