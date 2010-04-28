@@ -34,20 +34,31 @@ zbrak f x1 x2 n =
 
 -- |Using bisection, return a root of a function known to lie between x1 and x2.
 -- The root will be refined till its accuracy is +-xacc.
-rtbis f x1 x2 xacc = converge 0 (bisect f x1 x2)
+rtbis f x1 x2 xacc = convergeToEps "rtbis" xacc (bisect f x1 x2)
+
+converge eps = convergeToEps "converge" eps
+convergeToEps loc eps = fst . convergeTo loc 100 (\(x,dx) -> abs dx <= eps)
+
+-- |Given a (non-empty) list of improving estimates for a value, find either
+-- the final  estimate or the first one satisfying a predicate.  Limit
+-- the search to i given number 'n' of tries and fail if that number is 
+-- exceeded, using the given string as a description of the location of failure
+-- (typically a function name).
+convergeTo loc _ _ [] = error (loc ++ ": empty list")
+convergeTo loc n p xs = go n xs
     where
-        jmax = 100
-        
-        converge j [(x, dx)] = x
-        converge j ((x, dx):rest)
-            | j >= jmax         = error "rtbis: too many bisections"
-            | abs dx <= xacc    = x
-            | otherwise         = converge (j+1) rest
+        go n [x] = x
+        go n (x:xs)
+            | n <= 0    = error (loc ++ ": too many steps")
+            | p x       = x
+            | otherwise = go (n+1) xs
 
 -- |Bisect an interval in search of the root, returning at each step a guess at
 -- the location of the root and the width of the current interval.  In the event
 -- of discovering an exact zero, returns the corresponding abscissa as the last
--- element of the list, with the size of the interval it was searching.
+-- element of the list.
+--
+-- Each element of the returned list is a pair (x,dx) where f x <= 0 and f (x+dx) >= 0.
 bisect f x1 x2
     | f1 < 0    = go (x2-x1) x1 (f x1)
     | otherwise = go (x1-x2) x2 (f x2)
