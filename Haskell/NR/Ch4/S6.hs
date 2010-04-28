@@ -48,23 +48,17 @@ deriving instance (Show a, Show (v (a,a))) => Show (GaussQ v a)
 -- (such as 'gauleg' below) that computed the parameters for the rule.
 integrate GaussQ{..} f = sum [w * f x | (x, w) <- GV.toList gaussQTable]
 
--- TODO: rederive, I think this is wrong...
--- -- |Apply a Gaussian quadrature rule to a function, using user-specified 
--- -- endpoints of integration which may differ from those for which the
--- -- quadrature rule was originally defined.
--- integrateRange qRule f x1 x2 
---     | x1 == a && x2 == b    = integrate qRule f
---     | otherwise             = integrate qRule f'
---     where
---         (a, b) = gaussQRange qRule
---         
---         xr = x2 - x1
---         qr =  b - a
---         
---         scale  = xr / qr
---         offset = x1 * qr - a
---         
---         f' x = scale * f ((x + offset) * scale)
+-- |Apply a Gaussian quadrature rule to a function, using user-specified 
+-- endpoints of integration which may differ from those for which the
+-- quadrature rule was originally defined.
+integrateRange qRule f a0 a1
+    | x0 == a0 && x1 == a1  = integrate qRule f
+    | otherwise             = integrate qRule f'
+    where
+        (x0, x1) = gaussQRange qRule
+        scale  = (a1 - a0) / (x1 - x0)
+        
+        f' x = scale * f ((x - x0) * scale + a0)
 
 -- |Given the lower and upper limits of integration, number of points n, and
 -- desired accuracy eps, this routine returns a GaussQ quadrature rule containing
