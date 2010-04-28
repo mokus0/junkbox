@@ -76,7 +76,6 @@ gauleg x1 x2 n eps = GaussQ (x1, x2) table
                 xl = 0.5*(x2-x1)
         
         -- Zeroes and corresponding derivatives of the n'th Legendre polynomial.
-        -- Depends on a vector type with lazy elements, so we explicitly use V.Vector here.
         roots = GV.map (negate *** id) mRoots GV.++ GV.reverse (GV.take (n-m) mRoots)
             where
                 -- the roots are symmetric in the interval so we only have to find 'm' of them.
