@@ -3,7 +3,7 @@
  -      (c) 2009 Cook, J. MR  SSD, Inc.
  -}
 
-module ConvergingSum where
+module Functions.ConvergingSum where
 
 convergingSum z xs = go xs z
     where

@@ -8,17 +8,17 @@
   #-}
 
 
-module Cantor where
+module Functions.Cantor where
 
 import Data.Bits
 import Data.Word
-import ConvergingSum
+import Functions.ConvergingSum
 import Control.Monad
 
 import Data.Random
 
 cantor :: RVar Double
-cantor = wordToCantorM 1 getRandomWord
+cantor = wordToCantorM 1 stdUniform
 
 wordToCantorM :: Monad m => Double -> m Word64 -> m Double
 wordToCantorM b w = do
@@ -78,7 +78,6 @@ cantorBits = go . toB3
         go (1:xs) = [True]
         go (2:xs) = True:go xs
         go (0:xs) = False:go xs
-            
 
 recip_3 :: Double
 recip_3 = recip 3

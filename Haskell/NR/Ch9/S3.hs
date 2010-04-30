@@ -1,7 +1,9 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ViewPatterns #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 module NR.Ch9.S3 where
 
 import NR.Ch9.S1
+import Data.Maybe
+import Text.Printf
 
 data Brent a b = Brent
     { brA   :: !a
@@ -23,56 +25,111 @@ instance Eps Float  where eps = encodeFloat 1 (-23)
 
 -- TODO: clean up this mess!
 instance (Eps a, Fractional a, Ord a) => RootFinder Brent a a where
-    initRootFinder f x1 x2 = reorder (Brent x1 f1 x2 f2 x2 f2 dx dx)
-        where f1 = f x1; f2 = f x2; dx = x1 - x2
+    initRootFinder f x1 x2 = fixMagnitudes (Brent x1 f1 x2 f2 x1 f1 dx dx)
+        where f1 = f x1; f2 = f x2; dx = x2 - x1
     
-    stepRootFinder f r@(Brent a fa b fb c fc d e)
-        | abs e >= tol1 && abs fa > abs fb = iquad f xm tol1 r
-        | otherwise = bisect f xm tol1 r
+    stepRootFinder f r@(Brent _ fa b fb c _ _ e)
+        | abs e >= tol1 && abs fa > abs fb  = iquad  r
+        | otherwise                         = bisect r
         where
             xm = 0.5 * (c - b)
-            tol1 = 2 * eps * abs b + 0.5 * tol
-            tol = 0
+            tol1 = 2 * eps * (abs b + 0.5)
+            
+            bisect br = finish br{brD = xm, brE = xm}
+            iquad br@(Brent a fa b fb c fc d e)
+                | 2 * p < min min1 min2 = finish br {brD = p/q, brE = d}
+                | otherwise             = bisect br
+    
+                where
+                    s = fb / fa
+                    p = abs p'
+                    q = if p' > 0 then negate q' else q'
+                    (p',q') | a == c    = (2 * xm * s, 1 - s)
+                            | otherwise = let t = fa / fc
+                                              r = fb / fc
+                                           in ( s * (2 * xm * t * (t - r) - (b - a) * (r - 1))
+                                              , (t - 1) * (r - 1) * (s - 1)
+                                              )
+                    min1 = 3 * xm * q - abs (tol1 * q)
+                    min2 = abs (e * q)
 
-    estimateRoot Brent{brB = b} = b
-    estimateError Brent{brB = b, brC = c} = 0.5 * (c - b)
+            finish br@(Brent a fa b fb c fc d e) = reorder br{brA = b, brFA = fb, brB = b', brFB = f b'}
+                where
+                    b' = if abs d > tol1 then b + d else b + abs tol1 * signum xm
+
+
+    estimateRoot Brent{brB = b, brC = c} = b
+    estimateError Brent{brB = b, brC = c} = c - b
+    converged   _ Brent{brFB = 0}   = True
     converged tol br@Brent{brB = b} = abs (estimateError br) <= tol1
         where
-            tol1 = 2 * eps * abs b + 0.5 * tol
-
-reorder orig@(Brent a fa b fb c fc d e)
-    |  (fb > 0 && fc > 0)
-    || (fb < 0 && fc < 0)
-    =   let d' = b-a
-         in reorder (Brent a fa b fb a fa d' d')
-    | abs fc < abs fb
-    = Brent  b fb a fa b fb d e
-    | otherwise = orig
-
-iquad f xm tol1 orig@(Brent a fa b fb c fc d e)
-    | 2 * p < min min1 min2 = finish f xm tol1 (Brent a fa b fb c fc (p/q) d)
-    | otherwise             = bisect f xm tol1 orig
-    
-    where
-        s = fb / fa
-        p = abs p'
-        q = if p' > 0 then q' else negate q'
-        (p',q')   | a == c    = (2 * xm * s, 1 - s)
-                | otherwise = let t = fa / fc
-                                  r = fb / fc
-                               in ( s * (2 * xm * t * (t - r) - (b - a) * (r - 1))
-                                  , (t - 1) * (r - 1) * (s - 1)
-                                  )
-        min1 = 3 * xm * q - abs (tol1 * q)
-        min2 = abs (e * q)
-
-bisect f xm tol1 (Brent a fa b fb c fc d e) = finish f xm tol1 (Brent a fa b fb c fc xm xm)
-
-finish f xm tol1 (Brent a fa b fb c fc d e) = reorder (Brent b fb b' fb' c fc d e)
-    where
-        b' = if abs d > tol1 then b + d else b + abs tol1 * signum xm
-        fb' = f  b'
+            tol1 = 4 * eps * abs b + tol
 
 zbrent f x1 x2 xacc = 
     (estimateRoot :: (Fractional a, Ord a, Eps a) => Brent a a -> a)
     (findRoot f x1 x2 xacc)
+
+-- on input, (a,c) are prev bracket, b is new guess.
+-- on output, b and c bracket the root and |f(b)| <= |f(c)|
+-- and 'a' is either the prev guess or one of the new endpoints
+-- if f(a) is outside the range [f(b), f(c)].
+--
+-- Basically, this ensures that the algorithm always tightens either the
+-- bound on the domain or the bound on the range, and never loosens the bound
+-- on the domain.  In rare cases, a midpoint step (but not an inverse-quadratic 
+-- step) can loosen the bound on the range, if I understand correctly.
+reorder :: (Num a, Num b, Ord b) => Brent a b -> Brent a b
+reorder = fixMagnitudes . fixSigns
+
+-- Establish invariant that b and c bracket the root,
+-- based on existing invariant that (a,c) already does.
+-- 
+-- (a,c) brackets implies that either (b,c) or (a,b) brackets.  In the 
+-- former case, nothing needs to be done as (by construction) either fb is already
+-- between fa and fc or b is already between a and c (depending which kind of 
+-- step was taken).  In the latter case, discard C and use A in its place, because
+-- c and fc are both (by the existing invariants - (a,c) bracket, |f(c)| >= |f(a)|) 
+-- outside the new region of interest.
+fixSigns br@Brent{ brA  =  a, brB  =  b
+                 , brFA = fa, brFB = fb, brFC = fc }
+    |  (fb > 0 && fc > 0) || (fb < 0 && fc < 0)
+    = br { brC = a, brFC = fa
+         , brD = d', brE = d'
+         }
+    | otherwise 
+    = br
+    where d' = b - a
+
+-- Establish invariant that |f(c)| >= |f(b)|.
+-- If it is not already so, reset 'a' as well to ensure 'fa' falls
+-- between fb and fc.
+fixMagnitudes br@Brent{ brC  =  c, brB  =  b
+                      , brFC = fc, brFB = fb }
+    | abs fc < abs fb
+    = br { brA = b, brFA = fb
+         , brB = c, brFB = fc
+         , brC = b, brFC = fb
+         }
+    | otherwise 
+    = br
+
+-- |debugging function to show a nice trace of the progress of the algorithm
+traceBrent f mbRange = do
+    xs <- sequence
+        [ put br >> return br
+        | br <- traceRoot f x0 x1 (Just eps)
+        ]
+
+    putStrLn "(converged)"
+    go (last xs)
+    where 
+        (x0,x1) = fromMaybe (last (zbrac f 0 1)) mbRange
+        put Brent{brA=a, brB=b, brC=c, brFA=fa, brFB=fb, brFC=fc} = 
+            putStrLn . map fixPlus $
+            printf (concat (replicate 6 "%-+25g")) a b c fa fb fc
+        fixPlus '+' = ' '
+        fixPlus c = c
+        go x 
+            | x == x'   = return ()
+            | otherwise = put x >> go x'
+            where x' = stepRootFinder f x
