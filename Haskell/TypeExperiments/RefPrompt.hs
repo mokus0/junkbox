@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, RankNTypes #-}
+{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, RankNTypes, BangPatterns #-}
 module TypeExperiments.RefPrompt where
 
 import TypeExperiments.Env as Env
@@ -9,6 +9,8 @@ import Control.Monad.State
 import Data.IORef
 import Data.STRef
 import Data.Typeable
+import Data.Word
+import Control.Arrow
 
 -- The basic interface for computations using mutable references:
 data Refs r t where
@@ -34,19 +36,22 @@ stRefs (NewRef x) = newSTRef x
 stRefs (ReadRef r) = readSTRef r
 stRefs (WriteRef r x) = writeSTRef r x
 
-newtype EnvM s t = EnvM {unEnvM :: (StateT (Env s) (ST s) t)}
+-- EnvM is an explicit implementation of something semantically similar to ST.
+-- The only difference is that references can only be made to Typeable values.
+newtype EnvM s t = EnvM {unEnvM :: (State (Word64, Env s) t)}
     deriving (Functor, Monad)
 
 runEnvM :: (forall s. EnvM s t) -> t
-runEnvM x = runST (evalStateT (unEnvM x) empty)
+runEnvM x = evalState (unEnvM x) (0, empty)
 
 envRefs :: Refs (EnvKey s) t -> EnvM s t
 envRefs (NewRef x) = EnvM $ do
-    k <- lift newKey
-    modify (insert k x)
+    (!n, !s) <- get
+    let k = unsafeMkKey n
+    put (succ n, insert k x s)
     return k
-envRefs (ReadRef k) = EnvM (gets (Env.! k))
-envRefs (WriteRef k x) = EnvM (modify (insert k x))
+envRefs (ReadRef k) = EnvM (gets ((Env.! k) . snd))
+envRefs (WriteRef k x) = EnvM (modify (id *** insert k x))
 
 -- An example computation making use of the abstract interface:
 -- (this _only_ has access to mutable references, nothing else - eg, no printing, no file access, etc.)

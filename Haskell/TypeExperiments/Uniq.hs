@@ -1,5 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
-module TypeExperiments.Uniq (Uniq, getUniq) where
+module TypeExperiments.Uniq (Uniq, getUniq, unsafeMkUniq) where
 
 import Control.Monad.Primitive
 import Data.IORef
@@ -13,3 +13,6 @@ nextUniq = unsafePerformIO (newIORef 0)
 
 getUniq :: PrimMonad m => m (Uniq (PrimState m))
 getUniq = unsafePrimToPrim (atomicModifyIORef nextUniq (\(!u) -> let u' = u+1 in u' `seq` (u', Uniq u)))
+
+unsafeMkUniq :: Word64 -> Uniq s
+unsafeMkUniq n = Uniq n

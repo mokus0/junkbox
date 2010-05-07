@@ -38,6 +38,8 @@ newKey = do
     u <- getUniq
     return (EnvKey u)
 
+unsafeMkKey n = EnvKey (unsafeMkUniq n)
+
 empty :: Env s
 empty = Env M.empty
 
