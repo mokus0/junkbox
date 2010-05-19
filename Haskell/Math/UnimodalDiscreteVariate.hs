@@ -2,6 +2,7 @@
 module Math.UnimodalDiscreteVariate where
 
 import Data.Random hiding (binomial)
+import NR.Ch6.S1
 
 -- from http://cg.scs.carleton.ca/~luc/chapter_ten.pdf
 -- page 495
@@ -40,9 +41,10 @@ binomial n p = unimodal mode mm s_2 prob
         mean    = n' * p
         var     = mean*(1-p)
         mode    = fromIntegral (floor ((n'+1) * p))
-        mm      = prob mode {- ? -}
+        mm      = max (prob (floor mode)) (prob (ceiling mode)) {- ? -}
         s_2     = var + min 1 mean
-        prob k  = (n `c` k) * p^k * (1-p)^(n-k)
-        
-n `c` k = product [fromIntegral i | i <- [k+1..n]] / ((n-k)!)
-(!) n   = product [fromIntegral i | i <- [1..n]]
+        prob k  
+            | k < 0     = 0
+            | k > n     = 0
+            | otherwise = exp (bicoln n k + log p * fromIntegral k + log (1-p) * fromIntegral (n-k))
+        -- prob k  = fromIntegral (bico n k) * p^k * (1-p)^(n-k)

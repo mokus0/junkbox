@@ -18,7 +18,7 @@ midpnt f a b = go 0 ((b-a) * f (0.5 * (a+b)))
                 s' = s / 3 + del * sum ys
 
 
--- TODO: generalize these intergal-transform rules to apply to all quadratures
+-- TODO: generalize these integral-transform rules to apply to all quadratures
 midinf f a b
     | signum a * signum b >= 0
         = midpnt f' a' b'

@@ -1,6 +1,8 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ScopedTypeVariables, FlexibleContexts #-}
 module NR.Ch9.S1 where
 
+import Control.Monad.Instances
+
 -- |Given a function and an initial guessed range x1 to x2, this function
 -- expands the range geometrically until a root is bracketed by the returned
 -- values, returning a list of the successively expanded ranges.  The
@@ -68,8 +70,8 @@ findRoot f a b xacc = go nSteps start
         start = initRootFinder f a b
         
         go n x
-            | converged xacc x  = x
-            | n <= 0    = error "findRoot: too many iterations"
+            | converged xacc x  = Right x
+            | n <= 0            = Left  x
             | otherwise         = go (n-1) (stepRootFinder f x)
 
 -- |Bisect an interval in search of a root.  At all times, @f (estimateRoot _)@
@@ -100,7 +102,5 @@ instance (Fractional a, Ord b, Num b) => RootFinder Bisect a b where
 
 -- |Using bisection, return a root of a function known to lie between x1 and x2.
 -- The root will be refined till its accuracy is +-xacc.
-rtbis f x1 x2 xacc = 
-    (estimateRoot :: (Fractional a, Ord b, Num b) => Bisect a b -> a)
-    (findRoot f x1 x2 xacc)
-
+rtbis :: (Ord a, Fractional a, Ord b, Num b) => (a -> b) -> a -> a -> a -> Either (Bisect a b) a
+rtbis f x1 x2 xacc = fmap estimateRoot (findRoot f x1 x2 xacc)

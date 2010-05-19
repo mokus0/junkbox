@@ -28,46 +28,48 @@ instance (Eps a, Fractional a, Ord a) => RootFinder Brent a a where
     initRootFinder f x1 x2 = fixMagnitudes (Brent x1 f1 x2 f2 x1 f1 dx dx)
         where f1 = f x1; f2 = f x2; dx = x2 - x1
     
-    stepRootFinder f r@(Brent _ fa b fb c _ _ e)
-        | abs e >= tol1 && abs fa > abs fb  = iquad  r
-        | otherwise                         = bisect r
+    stepRootFinder f r@(Brent a fa b fb c fc d e)
+        |  abs fa > abs fb
+        && abs e >= tol1
+        && 2 * p < max2p    = iquadStep
+        |  otherwise        = bisectStep
         where
-            xm = 0.5 * (c - b)
+            -- Minimum step size and limits on 'p' to continue with inverse-quadratic interpolation
             tol1 = 2 * eps * (abs b + 0.5)
+            max2p = min (3 * xm * q - abs (tol1 * q))
+                        (abs (e * q))
             
-            bisect br = finish br{brD = xm, brE = xm}
-            iquad br@(Brent a fa b fb c fc d e)
-                | 2 * p < min min1 min2 = finish br {brD = p/q, brE = d}
-                | otherwise             = bisect br
-    
-                where
-                    s = fb / fa
-                    p = abs p'
-                    q = if p' > 0 then negate q' else q'
-                    (p',q') | a == c    = (2 * xm * s, 1 - s)
-                            | otherwise = let t = fa / fc
-                                              r = fb / fc
-                                           in ( s * (2 * xm * t * (t - r) - (b - a) * (r - 1))
-                                              , (t - 1) * (r - 1) * (s - 1)
-                                              )
-                    min1 = 3 * xm * q - abs (tol1 * q)
-                    min2 = abs (e * q)
-
-            finish br@(Brent a fa b fb c fc d e) = reorder br{brA = b, brFA = fb, brB = b', brFB = f b'}
+            -- Bisection step
+            bisectStep = advance xm xm
+            xm = 0.5 * (c - b)
+            
+            -- Inverse quadratic interpolation step
+            iquadStep = advance (p/q) d
+            s = fb / fa
+            p = abs p'
+            q = if p' > 0 then negate q' else q'
+            (p',q') | a == c    = (2 * xm * s, 1 - s)
+                    | otherwise = let t = fa / fc
+                                      r = fb / fc
+                                   in ( s * (2 * xm * t * (t - r) - (b - a) * (r - 1))
+                                      , (t - 1) * (r - 1) * (s - 1)
+                                      )
+            
+            -- Actual advancement used for both steps
+            advance d e = reorder r{brA = b, brFA = fb, brB = b', brFB = f b'}
                 where
                     b' = if abs d > tol1 then b + d else b + abs tol1 * signum xm
 
 
-    estimateRoot Brent{brB = b, brC = c} = b
+    estimateRoot  Brent{brB = b, brC = c} = b
     estimateError Brent{brB = b, brC = c} = c - b
     converged   _ Brent{brFB = 0}   = True
     converged tol br@Brent{brB = b} = abs (estimateError br) <= tol1
         where
             tol1 = 4 * eps * abs b + tol
 
-zbrent f x1 x2 xacc = 
-    (estimateRoot :: (Fractional a, Ord a, Eps a) => Brent a a -> a)
-    (findRoot f x1 x2 xacc)
+zbrent :: (Eps a, Ord a, Fractional a) => (a -> a) -> a -> a -> a -> Either (Brent a a) a
+zbrent f x1 x2 xacc = fmap estimateRoot (findRoot f x1 x2 xacc)
 
 -- on input, (a,c) are prev bracket, b is new guess.
 -- on output, b and c bracket the root and |f(b)| <= |f(c)|

@@ -79,11 +79,30 @@ instance Unit Bit where
 newtype Nat t = Nat t deriving (Eq, Show)
 instance Unit Nat where
     type UnitKind Nat = Entropy
-    toReferenceUnit (Nat x) = x P./ P.log 2
-    fromReferenceUnit x = Nat (x P.* P.log 2)
+    toReferenceUnit (Nat x) = x P.* P.log 2
+    fromReferenceUnit x = Nat (x P./ P.log 2)
 
 instance Num t => Num (Nat t) where
     fromInteger i = Nat (fromInteger i)
+
+newtype Byte t = Byte t deriving (Eq, Show)
+instance Unit Byte where
+    type UnitKind Byte = Entropy
+    toReferenceUnit (Byte x) = x P.* 8
+    fromReferenceUnit x = Byte (x P./ 8)
+
+instance Num t => Num (Byte t) where
+    fromInteger i = Byte (fromInteger i)
+
+newtype Micro unit t = Micro (unit t) deriving (Eq, Show)
+
+instance Unit t => Unit (Micro t) where
+    type UnitKind (Micro t) = UnitKind t
+    toReferenceUnit (Micro t) = toReferenceUnit t P./ 1000000
+    fromReferenceUnit x = Micro (fromReferenceUnit (1000000 P.* x))
+
+instance Num (u t) => Num (Micro u t) where
+    fromInteger i = Micro (fromInteger i)
 
 newtype Milli unit t = Milli (unit t) deriving (Eq, Show)
 

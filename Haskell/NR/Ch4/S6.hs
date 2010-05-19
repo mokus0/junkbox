@@ -75,7 +75,9 @@ gauleg x1 x2 n eps = GaussQ (x1, x2) table
                 xm = 0.5*(x2+x1)
                 xl = 0.5*(x2-x1)
 
--- |Zeroes and corresponding derivatives of the n'th Legendre polynomial.
+-- |Zeroes and corresponding derivatives of the n'th Legendre polynomial.  Signs
+-- of derivatives are not necessarily right - the derivatives are squared in
+-- 'gauleg' so the signs are not computed correctly here.
 legendreRoots n eps = GV.map (negate *** id) mRoots GV.++ GV.reverse (GV.take (n-m) mRoots)
     where
         -- the roots are symmetric in the interval so we only have to find 'm' of them.

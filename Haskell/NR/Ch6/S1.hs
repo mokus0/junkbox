@@ -5,7 +5,7 @@ import qualified Data.Vector.Unboxed as V
 
 class Gamma a where
     gammln :: a -> a
-    factln :: Int -> a
+    factln :: Integer -> a
 
 class Factorial a where
     factorial   :: Int -> a
@@ -39,9 +39,9 @@ instance Gamma Double where
                 ,   0.368991826595316234e-5
                 ]
     factln n
-        | n < 0     = error "factln: n < 0"
-        | n < nFacs =   facs V.! n
-        | otherwise = gammln (fromIntegral n+1)
+        | n < 0                 = error "factln: n < 0"
+        | n < toInteger nFacs   = facs V.! fromIntegral n
+        | otherwise             = gammln (fromIntegral n+1)
         where
             nFacs       = 2000 -- limited only by time and space
             facs        = V.map gammln (V.enumFromN 1 nFacs)
@@ -58,11 +58,13 @@ instance Factorial Double where
 
 bico n k
     | n < 0 || k < 0 || k > n   = error "bico: bad args"
-    | n < 171                   = floor (0.5 + factorial n / (factorial k * factorial (n-k)) :: Double)
+    | n < 171                   = floor (0.5 + factorial n' / (factorial k' * factorial (n'-k')) :: Double)
     | otherwise                 = floor (0.5 + exp (factln n - factln k - factln (n-k))      :: Double)
+    where
+        n' = fromIntegral n; k' = fromIntegral k
 
 bicoln n k
-    | n < 0 || k < 0 || k > n   = error "bicoln: bad args"
+    | n < 0 || k < 0 || k > n   = error ("bicoln: bad args: " ++ show (n, k))
     | otherwise                 = factln n - factln k - factln (n-k)
 
 beta z w = exp (gammln z + gammln w - gammln (z+w))

@@ -7,9 +7,8 @@ import Data.Ord
 
 -- | Using the false-position method, return a root of a function known
 -- to lie between x1 and x2.  The root is refined until its accuracy is += xacc.
-rtflsp f x1 x2 xacc = 
-    (estimateRoot :: (Fractional a, Ord a) => FalsePosition a a -> a)
-    (findRoot f x1 x2 xacc)
+rtflsp :: (Ord a, Fractional a) => (a -> a) -> a -> a -> a -> Either (FalsePosition a a) a
+rtflsp f x1 x2 xacc = fmap estimateRoot (findRoot f x1 x2 xacc)
     
 -- |Iteratively refine a bracketing interval [x1, x2] of a root of f
 -- until total convergence (which may or may not ever be achieved) using 
@@ -47,9 +46,8 @@ instance (Fractional a, Ord a) => RootFinder FalsePosition a a where
 
 -- |Using the secant method, return the root of a function thought to lie between
 -- x1 and x2.  The root is refined until its accuracy is +-xacc.
-rtsec f x1 x2 xacc = 
-    (estimateRoot :: (Fractional a, Ord a) => SecantMethod a a -> a)
-    (findRoot f x1 x2 xacc)
+rtsec :: (Ord a, Fractional a) => (a -> a) -> a -> a -> a -> Either (SecantMethod a a) a
+rtsec f x1 x2 xacc = fmap estimateRoot (findRoot f x1 x2 xacc)
 
 -- |Iteratively refine 2 estimates x1, x2 of a root of f until total 
 -- convergence (which may or may not ever be achieved) using the
@@ -90,9 +88,8 @@ instance (Fractional a, Ord a) => RootFinder SecantMethod a a where
     estimateError ConvergedSecantMethod{}   = 0
     estimateError SecantMethod{secDX = dx}  = dx
 
-zriddr f x1 x2 xacc =
-    (estimateRoot :: (Floating a, Ord a) => RiddersMethod a a -> a)
-    (findRoot f x1 x2 xacc)
+zriddr :: (Ord a, Floating a) => (a -> a) -> a -> a -> a -> Either (RiddersMethod a a) a
+zriddr f x1 x2 xacc = fmap estimateRoot (findRoot f x1 x2 xacc)
 
 data RiddersMethod a b
     = ConvergedRidders !a
