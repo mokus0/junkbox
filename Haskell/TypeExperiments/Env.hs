@@ -5,96 +5,93 @@ import Prelude hiding (lookup)
 import qualified Data.Map as M
 import Data.Dynamic
 import TypeExperiments.Uniq
+import TypeExperiments.GCompare
 import Control.Monad.Primitive
 import TypeExperiments.Dependent
 
--- These must both mention the 'state' token, so that the following expressions
--- will not be typeable (as they are not referentially transparent):
---
---  >   foo = runST newKey
---  >   bar = runST $ do {k <- newKey; return (singleton k thing)}
--- 
--- The former shows that 'EnvKey' must be tagged.
--- The latter may seem 'safe', as long as the key can never be 
--- extracted and the order of the keys is never exposed.  However, consider:
---  >   qux = union bar bar
---
--- The value of 'size qux' then depends on whether or not the
--- computation of bar was shared between its two references.  Therefore
--- 'Env' must be tagged as well.
+-- |Internal
+data Key f where Key :: !(f a) -> Key f
+instance GCompare f => Eq (Key f) where
+    Key a == Key b = case gcompare a b of
+        GEQ -> True
+        _   -> False
+instance GCompare f => Ord (Key f) where
+    compare (Key a) (Key b) = case gcompare a b of
+        GLT -> LT
+        GEQ -> EQ
+        GGT -> GT
 
-newtype Env s = Env (M.Map (Uniq s) Dynamic)
-data EnvKey s a where
-    EnvKey :: Typeable a => !(Uniq s) -> EnvKey s a
+-- |Typed-environment maps: f is a GADT-like thing with a facility for 
+-- rediscovering its type parameter, elements of which function as identifiers
+-- tagged with the type of the thing they identify.  Real GADTs are one
+-- useful instantiation of @f@, as are 'Tag's.
+newtype Env f = Env (M.Map (Key f) (DSum f))
 
 -- Internal: just a standard error message indicating an indexing error.
 envKeyErr str = error ("Env." ++ str ++ ": key not present or type error")
 
--- This is the only place the Typeable context is mentioned: the Typeable 
--- dictionary is captured and stored in the key.  This is also the only way in
--- which an 'Env' is tied to a monad.
-newKey :: (PrimMonad m, Typeable a) => m (EnvKey (PrimState m) a)
-newKey = do
-    u <- getUniq
-    return (EnvKey u)
-
-unsafeMkKey n = EnvKey (unsafeMkUniq n)
-
-empty :: Env s
+empty :: Env f
 empty = Env M.empty
 
-singleton :: EnvKey s a -> a -> Env s
+singleton :: GCompare f => f a -> a -> Env f
 singleton key thing = insert key thing empty
 
-null :: Env s -> Bool
+null :: Env f -> Bool
 null (Env m) = M.null m
 
-size :: Env s -> Int
+size :: Env f -> Int
 size (Env m) = M.size m
 
-fromList :: [DSum (EnvKey s)] -> Env s
+fromList :: GCompare f => [DSum f] -> Env f
 fromList [] = empty
 fromList (DSum k v : rest) = insert k v (fromList rest)
 
-member :: EnvKey s a -> Env s -> Bool
-member (EnvKey k) (Env m) = M.member k m
+member :: GCompare f => f a -> Env f -> Bool
+member k (Env m) = M.member (Key k) m
 
-insert :: EnvKey s a -> a -> Env s -> Env s
-insert (EnvKey u) thing (Env m) = Env (M.insert u (toDyn thing) m)
+insert :: GCompare f => f a -> a -> Env f -> Env f
+insert k thing (Env m) = Env (M.insert (Key k) (DSum k thing) m)
 
-insertWith :: (a -> a -> a) -> EnvKey s a -> a -> Env s -> Env s
-insertWith f (EnvKey u) thing (Env m) = Env (M.insertWith f' u (toDyn thing) m)
-    where
-        e = envKeyErr "insertWith"
-        f' x y = toDyn (f (fromDyn x e) (fromDyn y e))
+-- insertWith :: GCompare f => (a -> a -> a) -> f a -> a -> Env f -> Env f
+-- insertWith f k thing (Env m) = Env (M.insertWith f' (Key k) (DSum k thing) m)
+--     where
+-- --        e = envKeyErr "insertWith"
+--         f' :: GCompare f => DSum f -> DSum f -> DSum f
+--         f' (DSum k1 x) (DSum k2 y) = case gcompare k1 k2 of
+--             GEQ -> case gcompare k k1 of
+--                 GEQ -> DSum k (f x y)
 
-lookup :: EnvKey s a -> Env s -> Maybe a
-lookup (EnvKey u) (Env m) = do
-    dyn <- M.lookup u m
-    fromDynamic dyn
+lookup :: GCompare f => f a -> Env f -> Maybe a
+lookup k (Env m) = do
+    DSum k1 v <- M.lookup (Key k) m
+    GEQ <- geq k k1
+    return v
 
-delete :: EnvKey s a -> Env s -> Env s
-delete (EnvKey u) (Env m) = Env (M.delete u m)
+delete :: GCompare f => f a -> Env f -> Env f
+delete k (Env m) = Env (M.delete (Key k) m)
 
-(!) :: Env s -> EnvKey s a -> a
-Env m ! EnvKey u = fromDyn (m M.! u) $ envKeyErr "!"
+(!) :: GCompare f => Env f -> f a -> a
+Env m ! k = case m M.! Key k of
+    DSum k1 v -> case gcompare k k1 of
+        GEQ -> v
+        _ -> envKeyErr "!"
 
-(\\) :: Env s -> Env s -> Env s
+(\\) :: GCompare f => Env f -> Env f -> Env f
 Env m1 \\ Env m2 = Env (m1 M.\\ m2)
 
-intersection :: Env s -> Env s -> Env s
+intersection :: GCompare f => Env f -> Env f -> Env f
 intersection (Env m1) (Env m2) = Env (M.intersection m1 m2)
 
-difference :: Env s -> Env s -> Env s
+difference :: GCompare f => Env f -> Env f -> Env f
 difference (Env m1) (Env m2) = Env (M.difference m1 m2)
 
-union :: Env s -> Env s -> Env s
+union :: GCompare f => Env f -> Env f -> Env f
 union (Env m1) (Env m2) = Env (M.union m1 m2)
 
-unions :: [Env s] -> Env s
+unions :: GCompare f => [Env f] -> Env f
 unions envs = Env $ M.unions [ m | Env m <- envs]
 
-update :: (a -> Maybe a) -> EnvKey s a -> Env s -> Env s
-update f (EnvKey k) (Env m) = Env (M.update f' k m)
-    where
-        f' = fmap toDyn . f . flip fromDyn (envKeyErr "update")
+-- update :: GCompare f => (a -> Maybe a) -> f a -> Env f -> Env f
+-- update f k (Env m) = Env (M.update f' (Key k) m)
+--     where
+--         f' = fmap toDyn . f . flip fromDyn (envKeyErr "update")

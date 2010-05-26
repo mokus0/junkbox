@@ -33,10 +33,10 @@ instance HasResolution R8  where resolution _ = 8
 instance HasResolution R10 where resolution _ = 10
 instance HasResolution R16 where resolution _ = 16
 
-resolutionOf :: HasResolution a => f a -> Integer
+resolutionOf :: HasResolution a => g (f a) -> Integer
 resolutionOf = resolution . f
     where
-        f :: f a -> a
+        f :: g (f a) -> f a
         f = undefined
 
 instance HasResolution a => HasResolution (P1  a) where resolution a = resolutionOf a + 1
@@ -53,9 +53,9 @@ instance HasResolution a => HasResolution (X10 a) where resolution a = resolutio
 instance (HasResolution a, HasResolution b) => HasResolution (X a b) 
     where resolution a = resolution (x1 a) * resolution (x2 a)
             where
-                x1 :: X a b -> a
+                x1 :: f (X a b) -> f a
                 x1 = undefined
-                x2 :: X a b -> b
+                x2 :: f (X a b) -> f b
                 x2 = undefined
 
 -- |Construct and provide a resolution with the given resolution, for use with 'Fixed'
