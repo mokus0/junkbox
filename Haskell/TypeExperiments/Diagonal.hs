@@ -105,9 +105,9 @@ module TypeExperiments.Diagonal where
 data family DWrap r b
 type family Diag r b
 
-class (Functor (DWrap r), a ~ Diag r b) => Diagonal a r b | r b -> a, a -> r b where
-        wrap :: a -> DWrap r b
-        unWrap :: DWrap r b -> a
+class (Functor (DWrap r)) => Diagonal a r b | r b -> a, a -> r b where
+        wrap :: a ~ Diag r b => a -> DWrap r b
+        unWrap :: a ~ Diag r b => DWrap r b -> a
 
 data Pair
 data instance DWrap Pair c = Diag2 c c

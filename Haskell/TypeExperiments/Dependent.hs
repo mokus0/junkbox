@@ -3,7 +3,6 @@
         ExistentialQuantification, 
         KindSignatures, 
         ScopedTypeVariables,
-        ImpredicativeTypes,
         RankNTypes
   #-}
 module TypeExperiments.Dependent where
@@ -11,6 +10,15 @@ module TypeExperiments.Dependent where
 data DSum tag = forall a. DSum (tag a) a
 (>!) :: DSum tag -> (forall a. tag a -> a -> b) -> b
 (DSum tag x) >! f = f tag x
+-- By analogy to the (key => value) construction for dictionary entries in 
+-- many dynamic languages, we have (key --> value) as a shorthand for 
+-- constructing dependent sums:
+--
+-- (Could go even further: could use (:=>) as a data constructor,
+-- which would actually provide a pretty nifty syntax for working with 
+-- dependently-typed dictionaries as in TypeExperiments.Env since it would
+-- support pattern matching)
+tag --> thing = DSum tag thing
 
 data DProd tag = DProd (forall a. tag a -> a)
 (!) :: DProd tag -> tag a -> a
