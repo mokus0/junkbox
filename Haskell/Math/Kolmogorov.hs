@@ -4,13 +4,61 @@ module Math.Kolmogorov where
 import NR.Ch1.S4
 import NR.Ch6.S1
 
+--   Shift scheme parameters used in Marsaglia's paper:
+-- shiftPointU :: Fractional a => a
+-- shiftPointU = 1e140
+-- shiftPointL :: Fractional a => a
+-- shiftPointL = 1e-140
+-- 
+-- shiftDist :: Integral a => a
+-- shiftDist = 140
+-- 
+-- shiftBase :: Num a => a
+-- shiftBase = 10
+
+-- Shift scheme parameters I chose instead (since multiplication and division
+-- by powers of 2 is exact in floating-point world)
+shiftPointU :: Num a => a
+shiftPointU = 2 ^ 450
+shiftPointL :: Fractional a => a
+shiftPointL = 2 ^^ (-450)
+
+shiftDist :: Integral a => a
+shiftDist = 450
+
+shiftBase :: Num a => a
+shiftBase = 2
+
+-- Shifting and unshifting operations: These manage the external exponent
+-- for a value.
+shift x = shiftBy id (*) x
+shiftBy f (*) (x,e)
+    | fx < shiftPointL  = (shiftPointU * x, e - shiftDist)
+    | fx > shiftPointU  = (shiftPointL * x, e + shiftDist)
+    | otherwise         = (x,e)
+    where fx = f x
+
+unshift (x,0) = x
+unshift (x,e)
+    | e >= shiftDist        = unshift (shiftPointU * x, e - shiftDist)
+    | e <= negate shiftDist = unshift (shiftPointL * x, e + shiftDist)
+    | otherwise             = x * shiftBase ** realToFrac e
+
+multAndUnshift (a,aE) (b,bE) = unshift (a*b, aE+bE)
+
+-- Decompose d into k and h as described in the paper
 kDecomp n d = (k, h)
     where
         dn = d * fromIntegral n
         k = ceiling dn
         h = (fromIntegral k - dn)
 
--- H matrix used in kCdf
+-- Compute the scale factor n!/n^n in "shifted" form
+kScale n = foldl f (1,0) [1..n]
+        where
+            f (s,e) i = shift (s * fromIntegral i / fromIntegral n, e)
+
+-- H matrix used in kCdf and k value
 kCdfMat
   :: (RealFrac t, Enum t, Matrix UMatrix t, Integral a, Factorial t) =>
      a -> t -> (UMatrix t, Int)
@@ -30,11 +78,8 @@ kCdfMat n d = (matrix m m hMatCell, k)
         m = 2 * k - 1
 
 -- CDF of Kolmogorov's D-statistic for a given sample size n
-kCdf n d = scale * indexM hN (k-1) (k-1)
+kCdf n d = multAndUnshift (kScale n) (indexM hN (k-1) (k-1), expShift)
     where
-        n' = fromIntegral n
-        logScale = factln (toInteger n) - n' * log n' -- fromInteger (factorial (toInteger n)) / fromInteger (toInteger n^n)
-        scale = exp (logScale + expShift)
         (hN, expShift) = mPower hMat n
         (hMat, k) = kCdfMat n d
 
@@ -50,7 +95,7 @@ kCdfQuick n d
 -- a multiple of m^n, along with the natural logarithm of the factor.
 --
 -- That is, if @(mn, logS) = mPower m n@ then m^n = (e^logS) * mn
-mPower :: (Matrix m a, Floating a, Ord a) => m a -> Int -> (m a, a)
+mPower :: (Matrix m a, Floating a, Ord a) => m a -> Int -> (m a, Int)
 mPower m 1 = (m, 0)
 mPower m n
     | even n    = square (mPower m (n `div` 2))
@@ -59,18 +104,10 @@ mPower m n
         k = min (matRows m) (matCols m) `div` 2
         
         square (m, e) = m `mult` (m,e + e)
-        mult m1 (m2, e2) 
-            | pivot > exp 300 = (m4,e4)
-            | otherwise     = (m3,e3)
-            where
-                m3 = multiply m1 m2
-                e3 = e2
-                pivot = indexM m3 k k
-                m4 = liftLinear (* exp (-300)) m3
-                e4 = e3 + 300
-                
-        
+        mult m1 (m2, e2) = shiftBy (\m -> indexM m k k) scale (multiply m1 m2, e2)
 
+
+-- Analytic limiting form (as n -> ∞)
 -- kCdfLim d = sqrt (2 * pi) * recip_x * sum [exp (negate ((2 * fromIntegral i - 1)^2) * pi_2 * 0.125 * recip_x*recip_x) | i <- [1..]]
 --     where
 --         recip_x = recip x
