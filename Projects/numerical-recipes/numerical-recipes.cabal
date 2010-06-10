@@ -28,6 +28,7 @@ Library
   hs-source-dirs:       src
                         ../../Haskell
   exposed-modules:      Functions.Trim
+                        Math.Converge
                         Math.Legendre
                         NR.Ch1.S4.Alias
                         NR.Ch1.S4.IMat
@@ -75,9 +76,9 @@ Library
                         monad-loops == 0.3.*,
                         permutation == 0.4.*, 
                         pretty == 1.0.*,
-                        primitive == 0.3.*,
+                        primitive >= 0.2 && < 0.4,
                         stateref == 0.3.*,
-                        vector == 0.6.*
+                        vector >= 0.5 && < 0.7
   if flag(mtl)
     build-depends:      mtl == 1.1.*
   else
