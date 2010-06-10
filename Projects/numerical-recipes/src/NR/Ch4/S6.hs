@@ -40,6 +40,9 @@ data GaussQ v a = GaussQ
     , gaussQTable :: !(v (a, a))
     }
 
+abscissas (GaussQ r t) = GV.map fst t
+weights   (GaussQ r t) = GV.map snd t
+
 deriving instance (Eq   a, Eq   (v (a,a))) => Eq   (GaussQ v a)
 deriving instance (Show a, Show (v (a,a))) => Show (GaussQ v a)
 
