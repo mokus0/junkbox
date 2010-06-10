@@ -1,23 +1,34 @@
-{-# LANGUAGE FlexibleContexts #-}
-module Math.Kolmogorov where
+{-# LANGUAGE
+        MultiParamTypeClasses,
+        FlexibleInstances,
+        FlexibleContexts 
+  #-}
+-- |CDF of Kolmogorov's D-statistic, parameterized by sample size
+module Math.Kolmogorov (D(..))where
 
 import NR.Ch1.S4
 import NR.Ch6.S1
+import NR.Ch9.S1
+import NR.Ch9.S3
 
---   Shift scheme parameters used in Marsaglia's paper:
--- shiftPointU :: Fractional a => a
--- shiftPointU = 1e140
--- shiftPointL :: Fractional a => a
--- shiftPointL = 1e-140
--- 
--- shiftDist :: Integral a => a
--- shiftDist = 140
--- 
--- shiftBase :: Num a => a
--- shiftBase = 10
+import Data.Random
 
--- Shift scheme parameters I chose instead (since multiplication and division
--- by powers of 2 is exact in floating-point world)
+data D a = D Int
+    deriving (Eq, Show)
+
+instance Distribution D Double where
+    rvar (D n) = do
+        u <- stdUniform
+        let f x = kCdfQuick n x - u
+            (x0,x1) = last (zbrac f 0 1)
+        
+        case zbrent f x0 x1 eps of
+            Left stopped    -> fail ("Failed to find root, final state was: " ++ show stopped)
+            Right z         -> return z
+        
+instance CDF D Double where
+    cdf (D n) = kCdfQuick n
+
 shiftPointU :: Num a => a
 shiftPointU = 2 ^ 450
 shiftPointL :: Fractional a => a
