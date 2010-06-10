@@ -4,7 +4,7 @@
         FlexibleContexts 
   #-}
 -- |CDF of Kolmogorov's D-statistic, parameterized by sample size
-module Math.Kolmogorov (D(..))where
+module Data.Random.Distribution.Kolmogorov (D(..))where
 
 import NR.Ch1.S4
 import NR.Ch6.S1
@@ -20,12 +20,24 @@ instance Distribution D Double where
     rvar (D n) = do
         u <- stdUniform
         let f x = kCdfQuick n x - u
-            (x0,x1) = last (zbrac f 0 1)
+            (x0,x1) = last (zbrac f 0.01 0.1)
         
-        case zbrent f x0 x1 eps of
+        case findRoot f x0 x1 eps :: Either (Brent Double Double) (Brent Double Double) of
             Left stopped    -> fail ("Failed to find root, final state was: " ++ show stopped)
-            Right z         -> return z
-        
+            Right root      -> do
+                let z = estimateRoot root
+                    dz = 0.5 * estimateError root
+                
+                -- Very slight "blur" to account for the error in the root.
+                -- Center the blur above or below the reported root depending
+                -- on whether the root is above or below the zero.
+                case f z `compare` 0 of
+                    GT -> normal (z-dz) dz
+                    EQ -> normal z dz
+                    LT -> normal (z+dz) dz
+                
+                
+
 instance CDF D Double where
     cdf (D n) = kCdfQuick n
 
@@ -89,7 +101,9 @@ kCdfMat n d = (matrix m m hMatCell, k)
         m = 2 * k - 1
 
 -- CDF of Kolmogorov's D-statistic for a given sample size n
-kCdf n d = multAndUnshift (kScale n) (indexM hN (k-1) (k-1), expShift)
+kCdf n d 
+    | d <= 0    = 0
+    | otherwise = multAndUnshift (kScale n) (indexM hN (k-1) (k-1), expShift)
     where
         (hN, expShift) = mPower hMat n
         (hMat, k) = kCdfMat n d
