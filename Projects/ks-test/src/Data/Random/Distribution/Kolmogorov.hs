@@ -4,7 +4,7 @@
         FlexibleContexts 
   #-}
 -- |CDF of Kolmogorov's D-statistic, parameterized by sample size
-module Data.Random.Distribution.Kolmogorov (D(..))where
+module Data.Random.Distribution.Kolmogorov (D(..), kCdf, kCdfQuick)where
 
 import NR.Ch1.S4
 import NR.Ch6.S1

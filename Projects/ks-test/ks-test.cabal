@@ -17,4 +17,5 @@ description:            I'm too lame to describe my project
 Library
   hs-source-dirs:       src
   exposed-modules:      Data.Random.Distribution.Kolmogorov
+                        Math.Statistics.KSTest
   build-depends:        base >= 3, numerical-recipes, random-fu
