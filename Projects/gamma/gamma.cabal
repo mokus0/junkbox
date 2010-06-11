@@ -17,4 +17,5 @@ description:            I'm too lame to describe my project
 Library
   hs-source-dirs:       src
   exposed-modules:      Math.Gamma
-  build-depends:        base >= 3, numerical-recipes
+                        Math.Gamma.Stirling
+  build-depends:        base >= 3, numerical-recipes, vector >= 0.5 && < 0.7
