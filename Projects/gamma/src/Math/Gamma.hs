@@ -15,7 +15,7 @@ class Floating a => Gamma a where
     lnGamma z = log (gamma z)
     
     -- |Natural log of the factorial function
-    lnFactorial :: Integer -> a
+    lnFactorial :: Integral b => b -> a
     lnFactorial n = lnGamma (fromIntegral n+1)
 
 instance Gamma Float where
@@ -23,7 +23,7 @@ instance Gamma Float where
 
 instance Gamma Double where
     lnGamma = NR.gammln
-    lnFactorial = NR.factln
+    lnFactorial = NR.factln . toInteger
 
 -- |Incomplete gamma functions.  Minimal definition is either 'p' or 'q', preferably both.
 class Gamma a => IncGamma a where
@@ -59,13 +59,37 @@ instance IncGamma Double where
 
 -- |Factorial function
 class Num a => Factorial a where
-    factorial :: Int -> a
+    factorial :: Integral b => b -> a
     factorial = fromInteger . factorial
 
 instance Factorial Integer where
     factorial n = product [1..toInteger n]
 
 instance Factorial Float where
-    factorial = realToFrac . (NR.factorial :: Int -> Double)
+    factorial = realToFrac . (factorial :: Integral a => a -> Double)
 instance Factorial Double where
-    factorial = NR.factorial
+    factorial n
+        | toInteger n <= toInteger (maxBound :: Int)
+        = NR.factorial (fromIntegral n)
+        | otherwise = 1/0
+
+
+binomialCoefficient :: (Integral a, Integral b) => a -> a -> b
+binomialCoefficient n k
+    | n < 0     = error "binomialCoefficient n k: n < 0"
+    | k < 0     = error "binomialCoefficient n k: k < 0"
+    | k > n     = error "binomialCoefficient n k: k > n"
+    | n < 171   = floor (0.5 + factorial n' / (factorial k' * factorial (n'-k')) :: Double)
+    | otherwise = floor (0.5 + exp (lnBinomialCoefficient n k)                   :: Double)
+    where
+        n' = fromIntegral n; k' = fromIntegral k
+
+lnBinomialCoefficient :: (Integral a, Gamma b) => a -> a -> b
+lnBinomialCoefficient n k
+    | n < 0     = error "lnBinomialCoefficient n k: n < 0"
+    | k < 0     = error "lnBinomialCoefficient n k: k < 0"
+    | k > n     = error "lnBinomialCoefficient n k: k > n"
+    | otherwise = lnFactorial n - lnFactorial k - lnFactorial (n-k)
+
+beta :: Gamma a => a -> a -> a
+beta z w = exp (lnGamma z + lnGamma w - lnGamma (z+w))
