@@ -8,32 +8,32 @@ reflect gamma z
     | z > 0.5   = gamma z
     | otherwise = pi / (sin (pi * z) * gamma (1-z))
 
-gammaLanczosVar g p = reflect gamma
+gammaLanczosVar nTerms g p = reflect gamma
     where
         gamma zp1
-            | e > 0     = sqrt (2*pi) * e ** (z + 0.5) * exp (negate e) * a gam z
+            | x > 0     = sqrt (2*pi) * x ** (z + 0.5) * exp (negate x) * a gam z
             | otherwise = error (concat ["gammaLanczosVar: invalid g (", show gam, ") for z (", show z, ")"])
             where 
                 gam = g z
-                e = z + gam + 0.5
+                x = z + gam + 0.5
                 z = zp1 - 1
         
-        a g z = 0.5 * p 0 g + sum [ p k g * num / denom | k <- [1..] | num <- fallingPowers z | denom <- risingPowers z]
+        a g z = 0.5 * p g 0 + sum (take nTerms [ p g k * num / denom | k <- [1..] | num <- fallingPowers z | denom <- risingPowers (z + 1)])
 
 gammaLanczosConst g cs = reflect gamma
     where
         gamma zp1
-            | e > 0     = sqrt (2*pi) * e ** (z + 0.5) * exp (negate e) * a z
+            | x > 0     = sqrt (2*pi) * x ** (z + 0.5) * exp (negate x) * a z
             | otherwise = error (concat ["gammaLanczos: invalid g (", show g, ") for z (", show z, ")"])
             where 
-                e = z + g + 0.5
+                x = z + g + 0.5
                 z = zp1 - 1
         
         a z = head cs + sum [c / (z + k) | c <- tail cs | k <- [1..]]
 
 cs g = undefined
 
-p k g = sum [c (2*k+1) (2*a+1) * f a | a <- [0..k]]
+p g k = sum [c (2*k+1) (2*a+1) * f a | a <- [0..k]]
         where
             k' = fromIntegral k
             f a = sqrt 2 / pi
@@ -42,15 +42,15 @@ p k g = sum [c (2*k+1) (2*a+1) * f a | a <- [0..k]]
                 * exp (a' + g + 0.5)
                 where a' = fromIntegral a
 
-            gamma_n_plus_half n = fromInteger (fac (fac (2 * n - 1)) `div` (2^n))
-            fac n = product [1..n]
+            gamma_n_plus_half n = sqrt pi * product [fromIntegral i - 0.5 | i <-[1..n]]
 
 c 1 1 = 1
-c 2 2 = 2
+c 2 2 = 1
 c i 1 = negate (c (i-2) 1)
 c i j
     | i == j    = 2 * c (i-1) (j-1)
-    | otherwise = 2 * c (i-1) (j-1) - c (i-2) j
+    | i > j     = 2 * c (i-1) (j-1) - c (i-2) j
+    | otherwise = error "c i j: i > j"
 
 {-# INLINE risingPowers #-}
 risingPowers x = scanl1 (*) (iterate (1+) x)
