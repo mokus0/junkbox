@@ -10,8 +10,12 @@ class Floating a => Gamma a where
     -- |The gamma function:  gamma z == integral from 0 to infinity of
     -- @\t -> t**(z-1) * exp (negate t)@
     gamma :: a -> a
-    gamma z = exp (lnGamma z)
-    
+    gamma 0 = 0/0
+    gamma z
+        | z == abs z    = exp (lnGamma z)
+        | otherwise     = pi / (sin (pi * z) * exp (lnGamma (1-z)))
+
+
     -- |Natural log of the gamma function
     lnGamma :: a -> a
     lnGamma z = log (gamma z)
