@@ -63,12 +63,15 @@ abs_s n k
                 abs_s n k = table !! n V.! k
 
 -- Compute the number of terms required to achieve a given precision for a
--- given value of z.  The mamimum will typically (always?) be around 1.
--- (eps is 0 at z=0.86639115674955 and z=2.087930091329227)
+-- given value of z.  The mamimum will typically (always?) be around 1, and 
+-- seems to be more or less independent of the precision desired (though not 
+-- of the machine epsilon - essentially, near zero I think this method is
+-- extremely numerically unstable).
 terms prec z = converge (eps z) (f z)
     where
         cs' = cs
         f z = scanl1 (+) [c / q | c <- cs' | q <- risingPowers (z+1)]
+        -- (eps is 0 at z=0.86639115674955 and z=2.087930091329227)
         eps z = prec * abs ((z - 0.5) * log z - z + 0.5 * log (2*pi))
         converge eps xs = go 1 xs where go n (x:y:zs) | abs(x-y)<=eps = n | otherwise = go (n+1) (y:zs)
 

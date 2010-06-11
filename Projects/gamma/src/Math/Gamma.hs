@@ -21,7 +21,23 @@ class Floating a => Gamma a where
     lnFactorial n = lnGamma (fromIntegral n+1)
 
 instance Gamma Float where
-    lnGamma = realToFrac . (lnGamma :: Double -> Double) . realToFrac
+    lnGamma = realToFrac . gam . realToFrac
+        where
+            gam :: Double -> Double
+            gam z
+                | z <= 0    = error "lnGamma: z <= 0"
+                | otherwise = lnGammaStirling cs z
+                    where
+                        cs = [8.333333333333333e-2,8.333333333333333e-2,0.16388888888888886,0.4833333333333333,1.903571428571429,9.386904761904761,55.627182539682536,385.06111111111113,3049.370286195286,27190.662878787887,269592.44589993346,2942145.3460622714,3.50467952851801e7,4.524846280013889e8,6.294024232904708e9,9.38382340807317e10,1.492815245447996e12,2.524017944507227e13,4.519816875674298e14,8.54550564657986e15,1.701096502429735e17,3.5563045547165394e18,7.790305587568763e19,1.7843945212560584e21,4.265604690290731e22,1.0623408958587036e24,2.751951339532148e25,7.403960785750008e26,2.066018059231738e28,5.971632845044214e29,1.7857526486045162e31,5.5186535788731415e32,1.7606535181259371e34]
+    
+    lnFactorial n
+        | n' < 0                = error "lnFactorial n: n < 0"
+        | n' < toInteger nFacs  = facs V.! fromIntegral n
+        | otherwise             = lnGamma (fromIntegral n+1)
+        where
+            n' = toInteger n
+            nFacs       = 2000 -- limited only by time and space
+            facs        = V.map lnGamma (V.enumFromN 1 nFacs)
 
 instance Gamma Double where
     lnGamma z
