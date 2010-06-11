@@ -31,10 +31,26 @@ gammaLanczosConst g cs = reflect gamma
         
         a z = head cs + sum [c / (z + k) | c <- tail cs | k <- [1..]]
 
-p n g = undefined
+cs g = undefined
 
-cs :: [a]
-cs = undefined
+p k g = sum [c (2*k+1) (2*a+1) * f a | a <- [0..k]]
+        where
+            k' = fromIntegral k
+            f a = sqrt 2 / pi
+                * gamma_n_plus_half a 
+                * (a' + g + 0.5) ** (negate (a' + 0.5)) 
+                * exp (a' + g + 0.5)
+                where a' = fromIntegral a
+
+            gamma_n_plus_half n = fromInteger (fac (fac (2 * n - 1)) `div` (2^n))
+            fac n = product [1..n]
+
+c 1 1 = 1
+c 2 2 = 2
+c i 1 = negate (c (i-2) 1)
+c i j
+    | i == j    = 2 * c (i-1) (j-1)
+    | otherwise = 2 * c (i-1) (j-1) - c (i-2) j
 
 {-# INLINE risingPowers #-}
 risingPowers x = scanl1 (*) (iterate (1+) x)
