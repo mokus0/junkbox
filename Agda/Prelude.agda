@@ -24,4 +24,3 @@ typeOf {A} _ = A
 
 typeOf1 : {A : Set1} -> A -> Set1
 typeOf1 {A} _ = A
-

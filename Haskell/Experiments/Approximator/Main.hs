@@ -37,7 +37,8 @@ main = do
 		Left _ <- readTChan events
 		incr births
 	
-	while (atomically $ readTVar births `mgt` readTVar deaths) $ atomically $ do
+	let gt = liftM2 (>)
+	while (atomically $ readTVar births `gt` readTVar deaths) $ atomically $ do
 		event <- readTChan events
 		case event of
 			Left _ -> incr births
@@ -52,11 +53,6 @@ decr v = modify v (subtract 1)
 modify v f = do
 	x <- readTVar v
 	writeTVar v (f x)
-
-a `mgt` b = do
-	a <- a
-	b <- b
-	return (a > b)
 
 while cond loop = do
 	c <- cond

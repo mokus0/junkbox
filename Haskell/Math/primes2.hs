@@ -4,6 +4,7 @@
 module Math.Main where
 
 import System
+import Data.List
 
 
 -- congruent: given a modulus and a (ordered) list of numbers less than the
@@ -29,20 +30,33 @@ isPrime 0 = False
 isPrime 1 = False
 isPrime x = x > 0 && not (isComposite x)
 isComposite x = any (\y -> x `mod` y == 0) (takeWhile (x >^2) primes)
-divisors x = filter (%= x) (takeWhile (x >=) [1..])
 
-highlyComposite 1 = True
-highlyComposite x = length (divisors x) > (maximum (map (length . divisors) [1..(x-1)]))
 
-hcns = filter highlyComposite [1..]
+-- highlyComposite :: Integer -> Bool
+-- highlyComposite 1 = True
+-- highlyComposite x = length (divisors x) > (maxDivs `genericIndex` (x-1))
+
+divisors x = divs `genericIndex` x
+nDivisors = product . map succ . factor 
+divs = [] : [1] : map divisors [2..]
+    where
+        divisors x = filter (%= x) (takeWhile (x >=) [1..])
+
+hcns :: [Integer]
+hcns = go 1 2
+    where
+        go x n 
+            | d > x   = n : (go d $! (n+1))
+            | otherwise     = go x $! (n+1)
+            where d = nDivisors n
 
 primeGaps = zipWith (-) (tail primes) primes
 
 primorial 1 = 1
 primorial 2 = 2
-primorial x = foldr1 (*) (takeWhile (<=x) primes)
+primorial x = foldl1' (*) (takeWhile (<=x) primes)
 
-primorials = 1 : (scanl1 (*) primes)
+primorials = scanl (*) 1 primes
 
 -- Non-computational part... read a number n, print the nth prime
 
