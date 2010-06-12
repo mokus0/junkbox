@@ -232,6 +232,7 @@ aliasSizeV (ZipWith f v1 v2) = do
     n1 <- aliasSizeV v1
     n2 <- aliasSizeV v2
     return (min n1 n2)
+aliasSizeV (IVec m) = return (vecElems m)
 aliasSizeV (MVec m) = getVecSize m
 aliasSizeV (VecPermute p m) = aliasSizeV m
 aliasSizeV (VecMPermute p m) = aliasSizeV m
