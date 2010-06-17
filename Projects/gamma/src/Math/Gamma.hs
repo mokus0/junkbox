@@ -7,6 +7,8 @@ module Math.Gamma
 import Math.Gamma.Stirling (lnGammaStirling)
 import Math.Gamma.Lanczos (reflect, gammaLanczos, lnGammaLanczos)
 import qualified Data.Vector.Unboxed as V
+import Data.List (sortBy)
+import Data.Ord (comparing)
 
 import qualified NR.Ch6.S2 as NR
 
@@ -87,31 +89,115 @@ class Gamma a => IncGamma a where
     -- @\t -> t**(s-1) * exp (negate t)@
     lowerGamma :: a -> a -> a
     lowerGamma s x = exp (lnLowerGamma s x)
+    -- |Natural log of lower gamma function
+    lnLowerGamma :: a -> a -> a 
+    lnLowerGamma s x = lnGamma s + log (p s x)
+    -- |Regularized lower incomplete gamma function: lowerGamma z / gamma z
+    p :: a -> a -> a
+    p s x = 1 - q s x
+    
     -- |Upper gamma function: lowerGamma s x == integral from x to infinity of 
     -- @\t -> t**(s-1) * exp (negate t)@
     upperGamma :: a -> a -> a
     upperGamma s x = exp (lnUpperGamma s x)
-    
-    -- |Natural log of lower gamma function
-    lnLowerGamma :: a -> a -> a 
-    lnLowerGamma s x = lnGamma s + log (p s x)
     -- |Natural log of upper gamma function
     lnUpperGamma :: a -> a -> a
     lnUpperGamma s x = lnGamma s + log (q s x)
-    
-    -- |Regularized lower incomplete gamma function: lowerGamma z / gamma z
-    p :: a -> a -> a
-    p s x = 1 - q s x
     -- |Regularized upper incomplete gamma function: upperGamma z / gamma z
     q :: a -> a -> a
     q s x = 1 - p s x
 
 instance IncGamma Float where
-    p s x = realToFrac $ (NR.gammp :: Double -> Double -> Double) (realToFrac s) (realToFrac x)
-    q s x = realToFrac $ (NR.gammq :: Double -> Double -> Double) (realToFrac s) (realToFrac x)
+    p s x = realToFrac $ (p :: Double -> Double -> Double) (realToFrac s) (realToFrac x)
+    q s x = realToFrac $ (q :: Double -> Double -> Double) (realToFrac s) (realToFrac x)
 instance IncGamma Double where
-    p = NR.gammp
-    q = NR.gammq
+    lowerGamma 0 0 = 0/0
+    lowerGamma s x = sign (exp (log (abs x) * s - x) / s * m_1_sp1 s x)
+            where
+                sign 
+                    | x < 0 = case properFraction s of
+                        (sI, 0) | s < 0     -> const (0/0)
+                                | even sI   -> id 
+                                | otherwise -> negate
+                        _                   -> const (0/0)
+                    | otherwise = id
+    
+    -- TODO: properly handle x<0
+    -- lnLowerGamma s x = s * log x - log s - x + log (m_1_sp1 s x)    
+    
+    p 0 0 = 0/0
+    p s x
+        | x >= s+1  = 1 - q s x
+        | x < 0 
+        = case properFraction s of
+            (sI, 0) | s > 0 -> 1 - exp (-x) * sum (scanl (*) 1 [x / fromIntegral k | k <- [1 .. sI-1]]) -- [x^k / factorial k | k <- [0..sI-1]]
+            _               -> 0/0
+    
+        | s < 0
+        = sin (pi*s) / (-pi)
+        * exp (s * log x - x + lnGamma  (-s)) * m_1_sp1 s x
+    
+        | s == 0 || x == 0
+        = 0
+    
+        | otherwise
+        = exp (s * log x - x - lnGamma (s+1)) * m_1_sp1 s x
+
+    -- -- upperGamma s x = exp (-x) * (gamma s * convergingSum (scanl (*) 1 [x / n | n <- [1..]]) - x**s * m_1_sp1 s x / s)
+    -- -- upperGamma s x = exp (lnGamma s - x) * (convergingSum (scanl (*) 1 [x / n | n <- [1..]]) - convergingSum (scanl (*) ((x**s)/gamma(s+1)) [x / n | n <- [s+1 ..]]))
+    -- -- upperGamma s x  = exp (lnGamma s - x) 
+    -- --                 * convergingSum (zipWith (-) (scanl (*) 1 [x / n | n <- [1..]]) 
+    -- --                                              (scanl (*) ((x**s)/gamma(s+1)) [x / n | n <- [s+1 ..]])
+    -- --                                              )
+    -- upperGamma s x  = exp (lnGamma s - x) 
+    --                 * (sum series0 + convergingSum (zipWith (-) series1 series2))
+    --     where
+    --         (series0, series1) = splitAt (ceiling s) seriesA
+    --         seriesA = scanl (*) 1 [x / n | n <- [1..]]
+    --         series2 = scanl (*) ((x**s)/gamma(s+1)) [x / n | n <- [s+1 ..]]
+    -- 
+    -- -- lnUpperGamma s x = lnGamma s - x + log (convergingSum (scanl (*) 1 [x / n | n <- [1..]]) - convergingSum (scanl (*) ((x**s)/gamma(s+1)) [x / n | n <- [s+1 ..]]))
+    -- -- lnUpperGamma s x  = lnGamma s - x
+    -- --                   + log (convergingSum (zipWith (-) (scanl (*) 1 [x / n | n <- [1..]]) 
+    -- --                                                     (scanl (*) ((x**s)/gamma(s+1)) [x / n | n <- [s+1 ..]])
+    -- --                                                     ))
+    -- lnUpperGamma s x  = lnGamma s - x
+    --                 + log (sum0 + convergingSumRat (1e-16 * abs sum0) 1e-16 (zipWith (-) series1 series2))
+    --     where
+    --         sum0 = sum series0
+    --         (series0, series1) = splitAt (ceiling s) seriesA
+    --         seriesA = scanl (*) 1 [x / n | n <- [1..]]
+    --         series2 = scanl (*) ((x**s)/gamma(s+1)) [x / n | n <- [s+1 ..]]
+
+    q 0 x = 1
+    q s x  
+        | x <= 0 || x < s+1 = 1 - p s x
+        | otherwise
+        = case properFraction s of
+            (sI, 0) | s >= 0 
+                    -> fromRational $ sum (take sI series1)
+            _       -> convergingSumRat 0 1e-16 (sum series1a : zipWith (-) series1b series2)
+            where
+                lnX = log x
+                (series1a, series1b) = splitAt (max 0 (floor s)) series1
+                -- series1 = map exp $ scanl (+) (-x)                       [lnX - log n | n <- [1..]]
+                -- series2 = map exp $ scanl (+) (lnX*s - lnGamma(s+1) - x) [lnX - log n | n <- [s+1 ..]]
+                series1 = map (toRational (exp (-x)) *) $ scanl (*) (1)                     [toRational x/n | n <- [1..]]
+                series2 = map (toRational (exp (-x)) *) $ scanl (*) (toRational $ x**s / gamma(s+1)) [toRational x/n | n <- [toRational s+1 ..]]
+
+
+-- |Special case of Kummer's confluent hypergeometric function: \s z -> M(1;s+1;z)
+m_1_sp1 s z = convergingSum (scanl (*) 1 [z / x | x <- [s+1..]])
+
+-- |Add a possibly-infinite sum until its value doesn't change anymore.
+convergingSum xs = converge (scanl1 (+) xs)
+    where
+        converge []     = 0
+        converge [x]    = x
+        converge (x:rest@(y:_))
+            | x == y    = y
+            | otherwise = converge rest
+
 
 -- |Factorial function
 class Num a => Factorial a where
@@ -125,8 +211,8 @@ instance Factorial Float where
     factorial = realToFrac . (factorial :: Integral a => a -> Double)
 instance Factorial Double where
     factorial n
-        | n < 0        = error "factorial: n < 0"
-        | n < nFacs    = facs V.! fromIntegral n
+        | n < 0         = error "factorial: n < 0"
+        | n < nFacs     = facs V.! fromIntegral n
         | otherwise     = infinity
         where
             nFacs :: Num a => a
@@ -155,3 +241,15 @@ lnBinomialCoefficient n k
 
 beta :: Gamma a => a -> a -> a
 beta z w = exp (lnGamma z + lnGamma w - lnGamma (z+w))
+
+-- |Add a possibly-infinite sum until its value doesn't change anymore.
+convergingSumRat absErr relErr xs = fromRational (converge (scanl1 (+) (map toRational xs)))
+    where
+        converge []     = 0
+        converge [x]    = x
+        converge (x:rest@(y:_))
+            | abs(x-y) <= toRational absErr    = y
+            | err x y <= toRational relErr    = y
+            | otherwise = converge rest
+
+err a b = abs (a-b) / max (abs a) (abs b)
