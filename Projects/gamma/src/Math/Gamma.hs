@@ -220,25 +220,6 @@ instance Factorial Double where
             facs        = V.scanl (*) 1 (V.enumFromN 1 nFacs)
             infinity    = facs V.! nFacs
 
-
-
-binomialCoefficient :: (Integral a, Integral b) => a -> a -> b
-binomialCoefficient n k
-    | n < 0     = error "binomialCoefficient n k: n < 0"
-    | k < 0     = error "binomialCoefficient n k: k < 0"
-    | k > n     = error "binomialCoefficient n k: k > n"
-    | n < 171   = floor (0.5 + factorial n' / (factorial k' * factorial (n'-k')) :: Double)
-    | otherwise = floor (0.5 + exp (lnBinomialCoefficient n k)                   :: Double)
-    where
-        n' = fromIntegral n; k' = fromIntegral k
-
-lnBinomialCoefficient :: (Integral a, Gamma b) => a -> a -> b
-lnBinomialCoefficient n k
-    | n < 0     = error "lnBinomialCoefficient n k: n < 0"
-    | k < 0     = error "lnBinomialCoefficient n k: k < 0"
-    | k > n     = error "lnBinomialCoefficient n k: k > n"
-    | otherwise = lnFactorial n - lnFactorial k - lnFactorial (n-k)
-
 beta :: Gamma a => a -> a -> a
 beta z w = exp (lnGamma z + lnGamma w - lnGamma (z+w))
 
