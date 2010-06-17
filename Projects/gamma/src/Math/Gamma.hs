@@ -2,6 +2,7 @@ module Math.Gamma
     ( Gamma(..)
     , Factorial(..)
     , IncGamma(..)
+    , beta
     ) where
 
 import Math.Gamma.Stirling (lnGammaStirling)
