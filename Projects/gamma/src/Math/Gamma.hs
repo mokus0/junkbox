@@ -1,4 +1,8 @@
-module Math.Gamma where
+module Math.Gamma
+    ( Gamma(..)
+    , Factorial(..)
+    , IncGamma(..)
+    ) where
 
 import Math.Gamma.Stirling (lnGammaStirling)
 import Math.Gamma.Lanczos (reflect, gammaLanczos, lnGammaLanczos)
