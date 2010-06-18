@@ -6,6 +6,7 @@ import NR.Ch4.S6
 import NR.Ch5.S2 (CF(..), evalCF, expandInPlaceCD, expandInPlace)
 import NR.Ch6.S1
 import qualified Data.Vector.Unboxed as V
+import qualified Math.ContinuedFraction as CF
 
 aSwitch     = 100 :: Int
 fpMin       = 2.2250738585072014e-308 / eps :: Double   -- constant here is smallest positive normalized Double
@@ -45,10 +46,10 @@ gser a x = go (recip a) (recip a) a
 gcf a x = exp (negate x + a * log x - gln) * h
     where 
         gln = gammln a
---        h = recip . flip evalCF eps $ GCF [(x + 2 * n - 1 - a, n * (n - a)) | n <- [1..]]
-        h = expandInPlaceCD fpMin eps . GCF $ zip bs as
+--        h = recip . flip evalCF eps $ gcf [(x + 2 * n - 1 - a, n * (n - a)) | n <- [1..]]
+        h = expandInPlaceCD fpMin eps (CF.gcf 0 (zip as bs))
         as = 1 : [negate i * (i - a) | i' <- [1..], let i = fromInteger i']
-        bs = 0 : iterate (+2) (x+1-a)
+        bs = iterate (+2) (x+1-a)
 
 ngau = 18 :: Int
 gauleg36 = gauleg 0 2 (ngau * 2) 1e-15 :: GaussQ V.Vector Double
