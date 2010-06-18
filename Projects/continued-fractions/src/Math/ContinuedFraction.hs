@@ -5,6 +5,9 @@ module Math.ContinuedFraction
     , asCF, asGCF
     
     , truncateCF
+    , partitionCF
+    , evenCF
+    , oddCF
     
     , convergents
     , steed
@@ -86,6 +89,41 @@ truncateCF :: Int -> CF a -> CF a
 truncateCF n (CF  b0 ab) = CF  b0 (take n ab)
 truncateCF n (GCF b0 ab) = GCF b0 (take n ab)
 
+-- |Computes the even and odd parts, respectively, of a 'CF'.
+partitionCF :: Fractional a => CF a -> (CF a, CF a)
+partitionCF orig@(asGCF -> (b0,[]))     = (orig, orig)
+partitionCF (asGCF -> (b0,[(a1,b1)]))   = (final, final)
+    where
+        final = cf (b0 + a1/b1) []
+partitionCF (asGCF -> (b0, unzip -> (as,bs))) = (evenPart, oddPart)
+    where
+        pairs (a:b:rest) = (a,b) : pairs rest
+        pairs [a] = [(a,0)]
+        pairs _ = []
+        
+        alphas@(alpha1:alpha2:_) = zipWith (/) as (zipWith (*) bs (1:bs))
+        
+        evenPart = gcf b0 (zip cs ds)
+            where
+                cs =     alpha1 : [(-aOdd) * aEven  | (aEven, aOdd)  <- pairs (tail alphas)]
+                ds = 1 + alpha2 : [1 + aOdd + aEven | (aOdd,  aEven) <- tail (pairs alphas)]
+        
+        oddPart = gcf (b0+alpha1) (zip cs ds)
+            where
+                cs = [(-aOdd) * aEven  | (aOdd, aEven) <- pairs alphas]
+                ds = [1 + aOdd + aEven | (aEven, aOdd) <- pairs (tail alphas)]
+
+-- |Computes the even part of a 'CF' (that is, a new 'CF' whose convergents are
+-- the even-indexed convergents of the original).
+evenCF :: Fractional a => CF a -> CF a
+evenCF = fst . partitionCF
+
+-- |Computes the odd part of a 'CF' (that is, a new 'CF' whose convergents are
+-- the odd-indexed convergents of the original).
+oddCF :: Fractional a => CF a -> CF a
+oddCF = snd . partitionCF
+
+
 -- * Evaluating continued fractions
 
 -- |Evaluate the convergents of a continued fraction using the fundamental
@@ -100,11 +138,11 @@ truncateCF n (GCF b0 ab) = GCF b0 (take n ab)
 -- B_{n+1} = b_{n+1}B_n + a_{n+1}B_{n-1}
 --
 -- The convergents are then x_n = A_n/B_n
-convergents :: (Real a, Fractional b) => CF a -> [b]
-convergents (asGCF -> (realToFrac -> b0, gcf)) = drop 1 (zipWith (/) nums denoms)
+convergents :: Fractional a => CF a -> [a]
+convergents (asGCF -> (b0, gcf)) = drop 1 (zipWith (/) nums denoms)
     where
-        nums   = 1:b0:[realToFrac b * x1 + realToFrac a * x0 | x0:x1:_ <- tails nums   | (a,b) <- gcf]
-        denoms = 0:1 :[realToFrac b * x1 + realToFrac a * x0 | x0:x1:_ <- tails denoms | (a,b) <- gcf]
+        nums   = 1:b0:[b * x1 + a * x0 | x0:x1:_ <- tails nums   | (a,b) <- gcf]
+        denoms = 0:1 :[b * x1 + a * x0 | x0:x1:_ <- tails denoms | (a,b) <- gcf]
 
 -- |Evaluate the convergents of a continued fraction using Steed's method.
 -- Only valid if the denominator in the following recurrence for D_i never 
@@ -122,12 +160,12 @@ convergents (asGCF -> (realToFrac -> b0, gcf)) = drop 1 (zipWith (/) nums denoms
 -- 
 -- x_i = x_{i-1} + dx_i
 -- 
-steed :: (Real a, Fractional b) => CF a -> [b]
-steed (CF  b0 []) = [realToFrac b0]
-steed (GCF b0 []) = [realToFrac b0]
-steed (CF  0 (  a  :rest)) = map (1            /) (steed (CF  a rest))
-steed (GCF 0 ((a,b):rest)) = map (realToFrac a /) (steed (GCF b rest))
-steed (asGCF . fmap realToFrac -> (b0, (a1,b1):gcf)) 
+steed :: Fractional a => CF a -> [a]
+steed (CF  b0 []) = [b0]
+steed (GCF b0 []) = [b0]
+steed (CF  0 (  a  :rest)) = map (1 /) (steed (CF  a rest))
+steed (GCF 0 ((a,b):rest)) = map (a /) (steed (GCF b rest))
+steed (asGCF -> (b0, (a1,b1):gcf)) 
     = scanl (+) b0 dxs
     where
         dxs = a1/b1 : [(b * d - 1) * dx  | (a,b) <- gcf | d <- ds | dx <- dxs]
@@ -137,12 +175,12 @@ steed (asGCF . fmap realToFrac -> (b0, (a1,b1):gcf))
 -- Only valid if the denominators in the following recurrence never go to
 -- zero.  If this method blows up, try 'modifiedLentz'.
 --
-lentz :: (Real a, Fractional b) => CF a -> [b]
-lentz (CF  b0 []) = [realToFrac b0]
-lentz (GCF b0 []) = [realToFrac b0]
-lentz (CF  0 (  a  :rest)) = map (1            /) (lentz (CF  a rest))
-lentz (GCF 0 ((a,b):rest)) = map (realToFrac a /) (lentz (GCF b rest))
-lentz (asGCF . fmap realToFrac -> (b0, gcf)) 
+lentz :: Fractional a => CF a -> [a]
+lentz (CF  b0 []) = [b0]
+lentz (GCF b0 []) = [b0]
+lentz (CF  0 (  a  :rest)) = map (1 /) (lentz (CF  a rest))
+lentz (GCF 0 ((a,b):rest)) = map (a /) (lentz (GCF b rest))
+lentz (asGCF -> (b0, gcf)) 
     = scanl (*) b0 (zipWith (*) cs ds)
     where
         cs = [   b + a/c  | (a,b) <- gcf | c <- b0 : cs]
@@ -155,12 +193,12 @@ lentz (asGCF . fmap realToFrac -> (b0, gcf))
 -- typically 1e-30 or so.  This modification was proposed by Thompson and 
 -- Barnett.  Additionally splits the resulting list of convergents into 
 -- sublists, starting a new list every time the \'modification\' is invoked.
-modifiedLentz :: (Real a, Fractional b) => b -> CF a -> [[b]]
-modifiedLentz z (CF  b0 []) = [[realToFrac b0]]
-modifiedLentz z (GCF b0 []) = [[realToFrac b0]]
-modifiedLentz z (CF  0 (  a  :rest)) = map (map (1            /)) (modifiedLentz z (CF  a rest))
-modifiedLentz z (GCF 0 ((a,b):rest)) = map (map (realToFrac a /)) (modifiedLentz z (GCF b rest))
-modifiedLentz z (asGCF . fmap realToFrac -> (b0, gcf)) 
+modifiedLentz :: Fractional a => a -> CF a -> [[a]]
+modifiedLentz z (CF  b0 []) = [[b0]]
+modifiedLentz z (GCF b0 []) = [[b0]]
+modifiedLentz z (CF  0 (  a  :rest)) = map (map (1 /)) (modifiedLentz z (CF  a rest))
+modifiedLentz z (GCF 0 ((a,b):rest)) = map (map (a /)) (modifiedLentz z (GCF b rest))
+modifiedLentz z (asGCF -> (b0, gcf)) 
     = snd (mapAccumL multSublist b0 (separate cds))
     where
         multSublist b0 cds = let xs = scanl (*) b0 cds in (last xs, xs) 
