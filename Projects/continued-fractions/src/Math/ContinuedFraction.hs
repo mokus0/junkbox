@@ -5,6 +5,11 @@ module Math.ContinuedFraction
     , asCF, asGCF
     
     , truncateCF
+    
+    , equiv
+    , setNumerators
+    , setDenominators
+    
     , partitionCF
     , evenCF
     , oddCF
@@ -70,19 +75,19 @@ instance Functor CF where
     fmap f (CF  b0 cf)  = CF  (f b0) (map f cf)
     fmap f (GCF b0 gcf) = GCF (f b0) (map (f *** f) gcf)
 
--- |Extract the partial numerators of a 'CF', normalizing it if necessary so 
--- that all the partial denominators are 1.
+-- |Extract the partial denominators of a 'CF', normalizing it if necessary so 
+-- that all the partial numerators are 1.
 asCF  :: Fractional a => CF a -> (a, [a])
 asCF (CF  b0 cf) = (b0, cf)
-asCF (GCF b0 cf) = (b0, zipWith (/) bs cs)
+asCF (asGCF -> (b0,cf)) = (b0, zipWith (*) bs cs)
     where
-        (as, bs) = unzip cf
-        cs = head as : [a / c | c <- cs | a <- drop 1 as]
+        (a:as, bs) = unzip cf
+        cs = recip a : [recip (a*c) | c <- cs | a <- as]
 
 -- |Extract all the partial numerators and partial denominators of a 'CF'.
 asGCF :: Num a => CF a -> (a,[(a,a)])
 asGCF (CF  b0  cf) = (b0, [(1, b) | b <- cf])
-asGCF (GCF b0 gcf) = (b0, gcf)
+asGCF (GCF b0 gcf) = (b0, takeWhile ((/=0).fst) gcf)
 
 -- |Truncate a CF to the specified number of partial numerators and denominators.
 truncateCF :: Int -> CF a -> CF a
@@ -112,6 +117,39 @@ partitionCF (asGCF -> (b0, unzip -> (as,bs))) = (evenPart, oddPart)
             where
                 cs = [(-aOdd) * aEven  | (aOdd, aEven) <- pairs alphas]
                 ds = [1 + aOdd + aEven | (aEven, aOdd) <- pairs (tail alphas)]
+
+-- |Apply an equivalence transformation, multiplying each partial denominator 
+-- with the corresponding element of the supplied list.  If the list is
+-- too short, the rest of the 'CF' will be unscaled.
+equiv :: Num a => [a] -> CF a -> CF a
+equiv cs (asGCF -> (b0, unzip -> (as,bs)))
+    = gcf b0 (zip as' bs')
+    where
+        as' = zipWith (*) (zipWith (*) cs' (1:cs')) as
+        bs' = zipWith (*) cs' bs
+        cs' = cs ++ repeat 1
+
+-- |Apply an equivalence transform that sets the partial denominators of a 'CF'
+-- to the specfied values.  If the input list is too short, the rest of 
+-- the 'CF' will be unscaled.
+setDenominators :: Fractional a => [a] -> CF a -> CF a
+setDenominators denoms (asGCF -> (b0, unzip -> (as, bs))) 
+    = gcf b0 (zip as' bs')
+    where
+        as' = zipWith (*) as (zipWith (*) cs (1:cs))
+        bs' = zipWith ($) (map const denoms ++ repeat id) bs
+        cs = zipWith (/) bs' bs
+
+-- |Apply an equivalence transform that sets the partial numerators of a 'CF'
+-- to the specfied values.  If the input list is too short, the rest of 
+-- the 'CF' will be unscaled.
+setNumerators :: Fractional a => [a] -> CF a -> CF a
+setNumerators numers (asGCF -> (b0, unzip -> (as, bs))) 
+    = gcf b0 (zip as' bs')
+    where
+        as' = zipWith ($) (map const numers ++ repeat id) as
+        bs' = zipWith (*) bs cs
+        cs = zipWith (/) as' (zipWith (*) as (1:cs))
 
 -- |Computes the even part of a 'CF' (that is, a new 'CF' whose convergents are
 -- the even-indexed convergents of the original).
