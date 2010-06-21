@@ -1,3 +1,4 @@
+{-# LANGUAGE ParallelListComp #-}
 module Math.Gamma
     ( Gamma(..)
     , Factorial(..)
@@ -10,8 +11,7 @@ import Math.Gamma.Lanczos (reflect, gammaLanczos, lnGammaLanczos)
 import qualified Data.Vector.Unboxed as V
 import Data.List (sortBy)
 import Data.Ord (comparing)
-
-import qualified NR.Ch6.S2 as NR
+import Math.ContinuedFraction
 
 -- |Gamma function.  Minimal definition is ether gamma or lnGamma.
 class Floating a => Gamma a where
@@ -186,6 +186,31 @@ instance IncGamma Double where
                 series1 = map (toRational (exp (-x)) *) $ scanl (*) (1)                     [toRational x/n | n <- [1..]]
                 series2 = map (toRational (exp (-x)) *) $ scanl (*) (toRational $ x**s / gamma(s+1)) [toRational x/n | n <- [toRational s+1 ..]]
 
+lowerGammaCF s z = gcf 0
+    [ (p,q)
+    | p <- z ** s * exp (-z)
+        : interleave
+            [negate spn * z | spn <- [s..]]
+            [n * z   | n   <- [1..]]
+    | q <- [s..]
+    ]
+interleave (x:xs) (y:ys) = x:y:interleave xs ys
+
+-- upperGammaCF s z = gcf 0
+--     [ (p,q)
+--     | p <- z ** s * exp (-z)
+--         : interleave
+--             [1-s..]
+--             [1..]
+--     | q <- cycle [z,1]
+--     ]
+
+upperGammaCF s z = gcf 0
+    [ (p,q)
+    | p <- z ** s * exp (-z)
+        : zipWith (*) [1..] (iterate (subtract 1) (s-1))
+    | q <- [n + z - s | n <- [1,3..]]
+    ]
 
 -- |Special case of Kummer's confluent hypergeometric function: \s z -> M(1;s+1;z)
 m_1_sp1 s z = convergingSum (scanl (*) 1 [z / x | x <- [s+1..]])
