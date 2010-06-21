@@ -1,20 +1,21 @@
 name:                   converge
 version:                0.0.0.1
-stability:              experimental
+stability:              provisional
 
 cabal-version:          >= 1.2
 build-type:             Simple
 
-author:                 James Cook <your email here>
-maintainer:             James Cook <your email here>
-license:                Unspecified
+author:                 James Cook <mokus@deepbondi.net>
+maintainer:             James Cook <mokus@deepbondi.net>
+license:                PublicDomain
 homepage:               /dev/null
 
-category:               Unclassified
-synopsis:               I'm too lame to describe my project
-description:            I'm too lame to describe my project
+category:               Math
+synopsis:               Limit operations for converging sequences
+description:            Limit operations for converging sequences.  This is
+                        fairly simple right now.
 
 Library
   hs-source-dirs:       src
   exposed-modules:      Math.Sequence.Converge
-  build-depends:        base >= 3
+  build-depends:        base >= 3 && <5

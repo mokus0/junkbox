@@ -4,6 +4,9 @@ import Data.List
 import Data.Maybe
 import Data.Monoid
 
+relErr :: (Fractional a, Ord a) => a -> a -> a
+relErr a b = abs (a-b) / max (abs a) (abs b)
+
 -- |Take items from the list until two successive items are equal and 
 -- return the second of them (or an item is not equal to itself, to handle
 -- NaN without a 'RealFloat' context.  In this case, the first item of the 
