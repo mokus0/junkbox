@@ -1,18 +1,21 @@
 name:                   gamma
 version:                0.0.0.1
-stability:              experimental
+stability:              provisional
 
-cabal-version:          >= 1.2
+cabal-version:          >= 1.6
 build-type:             Simple
 
-author:                 James Cook <your email here>
-maintainer:             James Cook <your email here>
-license:                Unspecified
+author:                 James Cook <mokus@deepbondi.net>
+maintainer:             James Cook <mokus@deepbondi.net>
+license:                PublicDomain
 homepage:               /dev/null
 
-category:               Unclassified
-synopsis:               I'm too lame to describe my project
-description:            I'm too lame to describe my project
+category:               Math, Numerical
+synopsis:               Gamma function and related functions.
+description:            The gamma function, incomplete gamma functions,
+                        beta function, and factorials.
+
+extra-source-files:     extras/*.hs
 
 Library
   hs-source-dirs:       src

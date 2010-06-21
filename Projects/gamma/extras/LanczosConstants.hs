@@ -5,11 +5,12 @@
 -- (BLAS/GSL/etc.) and do not support any types other than Double, Float, and
 -- Complex Double/Float.
 -- 
--- I am keeping it around anyway and releasing this file, because with a
--- very small amount of work an end-user could fill in the gaps and use this
--- code to generate their own constants for lanczos gamma function
--- approximations, which one may wish to do if they wanted a more accurate
--- bigfloat or gamma function approximation.
+-- I am keeping it around anyway and including this file in the source 
+-- distribution, because with a very small amount of work an end-user 
+-- could fill in the gaps and use this code to generate their own constants 
+-- for lanczos gamma function approximations, which one may wish to do if 
+-- they wanted to implement, say, a gamma function for a very high precision
+-- floating point type.
 --
 -- Note that these really need to be run with significantly higher precision
 -- than the target type or truncation error will make the results useless.
