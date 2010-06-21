@@ -18,6 +18,8 @@ module Math.ContinuedFraction
     , steed
     , lentz
     , modifiedLentz
+    
+    , sumPartialProducts
     ) where
 
 import Control.Arrow ((***))
@@ -264,3 +266,8 @@ modifiedLentz z (asGCF -> (b0, gcf))
                 []          -> [[snd x]]
                 (xs:rest)   -> (snd x:xs):rest
             (xs, ys)            -> map snd xs : separate ys
+
+-- |Euler's formula for computing @sum (map product (inits xs))@.  Successive
+-- convergents of the resulting 'CF' are successive partial sums in the series.
+sumPartialProducts :: Num a => [a] -> CF a
+sumPartialProducts (x:xs) = gcf 0 ((x,1):[(negate x, 1 + x) | x <- xs])
