@@ -8,28 +8,47 @@
 -- calculating the coefficients.  It is not included in the distribution yet 
 -- because it makes use of a linear algebra library I have not yet released 
 -- (though I eventually intend to).
-module Math.Gamma.Lanczos (gammaLanczos, lnGammaLanczos, reflect) where
+module Math.Gamma.Lanczos
+    ( gammaLanczos, lnGammaLanczos
+    , reflect, reflectC
+    , reflectLn, reflectLnC
+    ) where
+
+import Data.Complex
 
 {-# INLINE reflect #-}
 reflect gamma z
     | z > 0.5   = gamma z
     | otherwise = pi / (sin (pi * z) * gamma (1-z))
 
+{-# INLINE reflectC #-}
+reflectC gamma z
+    | realPart z > 0.5  = gamma z
+    | otherwise         = pi / (sin (pi * z) * gamma (1-z))
+
+{-# INLINE reflectLn #-}
+reflectLn lnGamma z
+    | z > 0.5   = lnGamma z
+    | otherwise = log pi - log (sin (pi * z)) - lnGamma (1-z)
+
+{-# INLINE reflectLnC #-}
+reflectLnC lnGamma z
+    | realPart z > 0.5  = lnGamma z
+    | otherwise = log pi - log (sin (pi * z)) - lnGamma (1-z)
+
 {-# INLINE gammaLanczos #-}
 gammaLanczos g cs zp1
-    | x > 0     = sqrt (2*pi) * x ** (zp1 - 0.5) * exp (negate x) * a cs z
-    | otherwise = error (concat ["gammaLanczos: invalid g (", show g, ") for z (", show z, ")"])
+    = sqrt (2*pi) * x ** (zp1 - 0.5) * exp (negate x) * a cs z
     where
         x = zp1 + (g - 0.5)
         z = zp1 - 1
 
 {-# INLINE lnGammaLanczos #-}
-lnGammaLanczos g cs zp1
-    | x > 0     = log (sqrt (2*pi)) + log x * (zp1 - 0.5) - x + log (a cs z)
-    | otherwise = error (concat ["lnGammaLanczos: invalid g (", show g, ") for z (", show z, ")"])
+lnGammaLanczos g cs zp1 
+    = log (sqrt (2*pi)) + log x * (zp1 - 0.5) - x + log (a cs z)
     where 
         x = zp1 + (g - 0.5)
         z = zp1 - 1
 
 {-# INLINE a #-}
-a cs z = head cs + sum [c / (z + k) | c <- tail cs | k <- [1..]]
+a cs z = head cs + sum [c / (z + k) | c <- tail cs | k <- iterate (1+) 1]

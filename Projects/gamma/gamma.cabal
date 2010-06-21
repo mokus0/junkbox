@@ -17,6 +17,7 @@ description:            I'm too lame to describe my project
 Library
   hs-source-dirs:       src
   exposed-modules:      Math.Gamma
+                        Math.Gamma.Incomplete
                         Math.Gamma.Stirling
                         Math.Gamma.Lanczos
-  build-depends:        base >= 3, continued-fractions, vector >= 0.5 && < 0.7
+  build-depends:        base >= 3, continued-fractions, converge, vector >= 0.5 && < 0.7
