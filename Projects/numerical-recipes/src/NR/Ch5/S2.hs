@@ -7,16 +7,21 @@ module NR.Ch5.S2
     , expandInPlace, expandInPlaceCD
     ) where
 
-import Math.Converge
+import Math.Sequence.Converge
 import Math.ContinuedFraction
+import Data.Either
+import Data.Maybe
 import Data.Ratio
 import Control.Arrow
 
 
 evalCF :: (Fractional a, Ord a, Real a1) => CF a1 -> a -> a
-evalCF cf eps = head (convergeBy (~=) (drop 2 (expand cf)))
+evalCF cf eps = fromMaybe empty (convergeBy eq Just (expand cf))
     where
-        x ~= y      = (abs (x-y) < eps)
+        empty = error "evalCF: programming error, CF had no convergents!"
+        eq (_:_:x:y:_)
+            | abs (x-y) <= abs eps      = Just y
+            | otherwise                 = Nothing
 
 expand :: (Real a, Fractional b) => CF a -> [b]
 expand cf = convergents (fmap realToFrac cf)
@@ -29,6 +34,14 @@ expandInPlace cf = converge (expand cf)
 
 expandInPlaceCD :: (Fractional a, Ord a) => a -> a -> CF a -> a
 expandInPlaceCD tiny eps cf
-    = head (convergeBy (~=) (concatMap (drop 2) (modifiedLentz tiny cf)))
+    = fromMaybe empty 
+    . convergeBy (listToMaybe . rights) (either Just Just)
+    . catMaybes
+    . map (convergeBy eq (Just . Left))
+    $ modifiedLentz tiny cf
     where
-        x ~= y      = (abs (x-y) < eps)
+        empty = error "evalCF: programming error, CF had no convergents!"
+        eq (a:b:x:y:_)
+            | b /= b                    = Just (Right a)
+            | abs (x-y) <= abs eps      = Just (Right y)
+            | otherwise                 = Nothing
