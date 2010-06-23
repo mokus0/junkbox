@@ -1,6 +1,6 @@
 module NR.Ch3.S5 where
 
-import NR.Ch5.S1
+import Math.Polynomial
 
 import NR.Ch3.S1
 import qualified Data.Vector as V

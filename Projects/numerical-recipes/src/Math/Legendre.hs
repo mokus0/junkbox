@@ -1,7 +1,8 @@
 {-# LANGUAGE ParallelListComp #-}
 module Math.Legendre where
 
-import NR.Ch5.S1
+import Math.Polynomial
+import Math.Polynomial.NumInstance
 
 -- |List of the legendre polynomials with 'Rational' coefficients.
 legendres :: [Poly Rational]

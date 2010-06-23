@@ -7,7 +7,7 @@
   #-}
 module NR.Ch4.S6 where
 
-import NR.Ch5.S1
+import Math.Polynomial
 
 import Control.Arrow
 import Control.Monad.Loops

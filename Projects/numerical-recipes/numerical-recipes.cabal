@@ -57,7 +57,6 @@ Library
                         NR.Ch4.S3
                         NR.Ch4.S4
                         NR.Ch4.S6
-                        NR.Ch5.S1
                         NR.Ch5.S2
                         NR.Ch5.S4
                         NR.Ch5.S6
@@ -76,6 +75,7 @@ Library
                         converge,
                         monad-loops == 0.3.*,
                         permutation == 0.4.*, 
+                        polynomial,
                         pretty == 1.0.*,
                         primitive >= 0.2 && < 0.4,
                         stateref == 0.3.*,

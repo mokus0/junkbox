@@ -3,7 +3,7 @@ module NR.Ch5.S6
     ( quadratic, complexQuadratic
     ) where
 
-import NR.Ch5.S1
+import Math.Polynomial
 import Data.Complex
 
 linear 0 b = []
