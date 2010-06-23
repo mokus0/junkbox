@@ -2,6 +2,7 @@
 module Math.Polynomial.Type 
     ( Endianness(..)
     , Poly, poly, polyCoeffs
+    , polyIsZero
     ) where
 
 import Data.List.Extras.LazyLength
@@ -31,6 +32,9 @@ polyCoeffs :: Num a => Endianness -> Poly a -> [a]
 polyCoeffs end p = case trim p of
     Poly e _ cs | e == end  -> cs
                 | otherwise -> reverse cs
+
+polyIsZero :: Num a => Poly a -> Bool
+polyIsZero = null . coeffs . trim
 
 data Endianness 
     = BE 
@@ -62,14 +66,14 @@ instance (Num a, Eq a) => Eq (Poly a) where
         = polyCoeffs BE p == polyCoeffs BE p
         
 
-instance (Num a, Ord a) => Ord (Poly a) where
-    compare p q = mconcat
-            [ lengthCompare pCoeffs qCoeffs
-            , compare       pCoeffs qCoeffs
-            ]
-        where
-            pCoeffs = polyCoeffs BE p
-            qCoeffs = polyCoeffs BE q
+-- instance (Num a, Ord a) => Ord (Poly a) where
+--     compare p q = mconcat
+--             [ lengthCompare pCoeffs qCoeffs
+--             , compare       pCoeffs qCoeffs
+--             ]
+--         where
+--             pCoeffs = polyCoeffs BE p
+--             qCoeffs = polyCoeffs BE q
 
 instance Functor Poly where
     fmap f (Poly end _ cs) = Poly end False (map f cs)

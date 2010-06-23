@@ -19,5 +19,6 @@ Library
   exposed-modules:      Math.Polynomial
                         Math.Polynomial.Legendre
                         Math.Polynomial.NumInstance
+                        Math.Polynomial.Pretty
   other-modules:        Math.Polynomial.Type
-  build-depends:        base >= 3 && <5, list-extras, pretty
+  build-depends:        base >= 3 && <5, list-extras, pretty, prettyclass
