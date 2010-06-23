@@ -1,5 +1,5 @@
 {-# LANGUAGE ParallelListComp, ViewPatterns #-}
-module NR.Ch5.S1
+module Math.Polynomial
     ( Poly, polyBE, polyLE, polyCoeffsBE, polyCoeffsLE
     , addPoly, negatePoly, multPoly
     , quotRemPoly, quotPoly, remPoly
@@ -10,19 +10,18 @@ module NR.Ch5.S1
     ) where
 
 import Data.List
-import Data.Monoid
-import Functions.Trim (dropEnd)
-import qualified Data.Vector as V
-import qualified Data.Vector.Mutable as MV
-import qualified Data.Vector.Generic as GV
-import Control.Monad.ST
 import Text.PrettyPrint
 
-instance Num a => Num (Poly a) where
-    fromInteger x = polyLE [fromInteger x]
-    (+) = addPoly
-    negate = negatePoly
-    (*) = multPoly
+-- dropEnd p = reverse . dropWhile p . reverse
+dropEnd p = go id
+    where
+        go t (x:xs)
+            -- if p x, stash x (will only be used if 'not (any p xs)')
+            | p x       =        go (t.(x:))  xs
+            -- otherwise insert x and all stashed values in output and reset the stash
+            | otherwise = t (x : go  id       xs)
+        -- at end of string discard the stash
+        go t [] = []
 
 -- |Make a 'Poly' from a Little-Endian list of coefficients (head is const term)
 polyLE cs = PolyLE (dropEnd (0==) cs)
@@ -109,5 +108,5 @@ polDivMon (PolyLE cs) a = (polyLE q, r)
 gcdPoly a 0  =  monic a
 gcdPoly a b  =  gcdPoly b (a `remPoly` b)
 
-monic 0 = 0
-monic (PolyLE (x:xs)) = PolyLE (1:map (/x) xs)
+monic (PolyLE []) = 0
+monic (polyCoeffsBE -> (x:xs)) = polyBE (1:map (/x) xs)
