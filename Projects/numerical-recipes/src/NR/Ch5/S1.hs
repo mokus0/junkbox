@@ -6,6 +6,7 @@ module NR.Ch5.S1
     , evalPoly, evalPolyDeriv, evalPolyDerivs
     , polDivMon
     , prettyPoly, prettyPolyWith, prettyTerm
+    , gcdPoly
     ) where
 
 import Data.List
@@ -104,3 +105,9 @@ evalPolyDerivs (PolyLE cs) x = trunc . zipWith (*) factorials $ foldr mul (repea
 polDivMon (PolyLE cs) a = (polyLE q, r)
     where 
         (r,q) = mapAccumR (\rem swap -> (swap + rem * a, rem)) 0 cs
+
+gcdPoly a 0  =  monic a
+gcdPoly a b  =  gcdPoly b (a `remPoly` b)
+
+monic 0 = 0
+monic (PolyLE (x:xs)) = PolyLE (1:map (/x) xs)
