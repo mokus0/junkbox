@@ -1,5 +1,5 @@
 name:                   converge
-version:                0.0.0.1
+version:                0.1
 stability:              provisional
 
 cabal-version:          >= 1.2
