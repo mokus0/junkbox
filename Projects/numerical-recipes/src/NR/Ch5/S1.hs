@@ -1,4 +1,4 @@
-{-# LANGUAGE ParallelListComp #-}
+{-# LANGUAGE ParallelListComp, ViewPatterns #-}
 module NR.Ch5.S1
     ( Poly, polyBE, polyLE, polyCoeffsBE, polyCoeffsLE
     , addPoly, negatePoly, multPoly
@@ -23,12 +23,14 @@ instance Num a => Num (Poly a) where
     negate = negatePoly
     (*) = multPoly
 
--- |Make a Poly from a Little-Endian list of coefficients (head is const term)
+-- |Make a 'Poly' from a Little-Endian list of coefficients (head is const term)
 polyLE cs = PolyLE (dropEnd (0==) cs)
+-- |Get the coefficients of a a 'Poly' in Little-Endian order (head is const term)
 polyCoeffsLE (PolyLE cs) = cs
 
--- |Make a Poly from a Big-Endian list of coefficients (head is x^n term)
+-- |Make a 'Poly' from a Big-Endian list of coefficients (head is x^n term)
 polyBE cs = polyLE (reverse cs)
+-- |Get the coefficients of a a 'Poly' in Big-Endian order (head is x^n term)
 polyCoeffsBE p = reverse (polyCoeffsLE p)
 
 -- |Polynomials represented as lists of coefficients.  The 'head' of the list
@@ -38,6 +40,8 @@ polyCoeffsBE p = reverse (polyCoeffsLE p)
 newtype Poly a = PolyLE [a] deriving (Eq, Ord)
 instance Show a => Show (Poly a) where
     showsPrec p (PolyLE cs) = showParen (p > 10) (showString "polyLE " . showsPrec 11 cs)
+
+polyOrder (PolyLE cs) = min 0 (length cs - 1)
 
 prettyPoly p = prettyPolyWith (prettyTerm 'x') p
 
@@ -62,8 +66,18 @@ multPoly (PolyLE xs) (PolyLE ys) = polyLE $ foldl zipSum []
     | x <- xs
     | shift <- inits (repeat 0)
     ]
-quotRemPoly (PolyLE u) (PolyLE v) = case polDivST (/) (V.fromList u) (V.fromList v) of
-    (q,r) -> (polyLE (V.toList q), polyLE (V.toList r))
+
+quotRemPoly (polyCoeffsBE -> u) (polyCoeffsBE -> v)
+    = go [] u (length u - length v)
+    where
+        v0  | null v    = 0
+            | otherwise = head v
+        go q u n
+            | null u || n < 0   = (polyLE q, polyBE u)
+            | otherwise         = go (q0:q) u' (n-1)
+            where
+                q0 = head u / v0
+                u' = tail (zipWith (-) u (map (q0 *) (v ++ repeat 0)))
 
 quotPoly u v = fst (quotRemPoly u v)
 remPoly  u v = snd (quotRemPoly u v)
@@ -90,38 +104,3 @@ evalPolyDerivs (PolyLE cs) x = trunc . zipWith (*) factorials $ foldr mul (repea
 polDivMon (PolyLE cs) a = (polyLE q, r)
     where 
         (r,q) = mapAccumR (\rem swap -> (swap + rem * a, rem)) 0 cs
-
-polDivST (/) u v = runST $ do
-    let nv = V.length v - 1
-        n  = V.length u - 1
-        
-    -- initialize output arrays
-    q <- MV.newWith (V.length u) 0
-    r <- MV.newWith (V.length u) 0
-    sequence_ [ MV.write r i (u V.! i) | i <- [0..n]]
-    
-    -- perform the division
-    sequence_
-        [ do
-            -- q[k] = r[nv+k] / v[nv]
-            r_nvpk <- MV.read r (nv+k)
-            let q_k = r_nvpk / (v V.! nv)
-            MV.write q k q_k
-            sequence_
-                [ do
-                    -- r[j] -= q[k] * v[j-k]
-                    r_j <- MV.read r j
-                    MV.write r j $! (r_j - q_k * (v V.! (j-k)))
-                | j <- [nv + k - 1, nv + k - 2 .. k]
-                ]
-        | k <- [n-nv , n-nv-1 .. 0]
-        ]
-    -- zero out excess in r
-    sequence_
-        [ MV.write r j 0
-        | j <- [nv .. n]
-        ]
-    
-    q <- GV.unsafeFreeze q
-    r <- GV.unsafeFreeze r
-    return ((q,r) `asTypeOf` (u,u))
