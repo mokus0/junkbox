@@ -37,6 +37,7 @@ reflectLnC lnGamma z
     | otherwise = log pi - log (sin (pi * z)) - lnGamma (1-z)
 
 {-# INLINE gammaLanczos #-}
+gammaLanczos _ [] _ = error "gammaLanczos: empty coefficient list"
 gammaLanczos g cs zp1
     = sqrt (2*pi) * x ** (zp1 - 0.5) * exp (negate x) * a cs z
     where
@@ -44,6 +45,7 @@ gammaLanczos g cs zp1
         z = zp1 - 1
 
 {-# INLINE lnGammaLanczos #-}
+lnGammaLanczos _ [] _ = error "lnGammaLanczos: empty coefficient list"
 lnGammaLanczos g cs zp1 
     = log (sqrt (2*pi)) + log x * (zp1 - 0.5) - x + log (a cs z)
     where 
@@ -51,4 +53,5 @@ lnGammaLanczos g cs zp1
         z = zp1 - 1
 
 {-# INLINE a #-}
+a [] z = error "Math.Gamma.Lanczos.a: empty coefficient list"
 a cs z = head cs + sum [c / (z + k) | c <- tail cs | k <- iterate (1+) 1]

@@ -1,7 +1,7 @@
 {-# LANGUAGE ParallelListComp #-}
 module Math.Gamma.Incomplete
     ( lowerGammaCF, pCF
-    , upperGammaCF, qCF
+    , upperGammaCF, qCF, qNeg
     , lowerGammaHypGeom, pHypGeom
     ) where
 
@@ -33,15 +33,11 @@ lowerGammaHypGeom s x = sign (exp (log (abs x) * s - x) / s * m_1_sp1 s x)
                             | otherwise -> negate
                     _                   -> const (0/0)
                 | otherwise = id
+
 -- |Regularized lower incomplete gamma function, computed using Kummer's
 -- confluent hypergeometric function.  Uses same identity as 'lowerGammaHypGeom'.
 pHypGeom 0 0 = 0/0
 pHypGeom s x
-    | x < 0 
-    = case properFraction s of
-        (sI, 0) | s > 0 -> 1 - exp (-x) * sum (scanl (*) 1 [x / fromIntegral k | k <- [1 .. sI-1]]) -- [x^k / factorial k | k <- [0..sI-1]]
-        _               -> 0/0
-
     | s < 0
     = sin (pi*s) / (-pi)
     * exp (s * log x - x + lnGamma  (-s)) * m_1_sp1 s x
@@ -52,7 +48,7 @@ pHypGeom s x
     | otherwise
     = exp (s * log x - x - lnGamma (s+1)) * m_1_sp1 s x
 
--- Only valid for infinite lists.  Only used in definitions of continued fractions.
+-- Only valid for infinite lists.  Only used in the following definitions of continued fractions.
 interleave (x:xs) (y:ys) = x:y:interleave xs ys
 
 -- |Continued fraction representtion of the lower incomplete gamma function.
@@ -96,3 +92,8 @@ qCF s x = gcf 0
         : zipWith (*) [1..] (iterate (subtract 1) (s-1))
     | q <- [n + x - s | n <- [1,3..]]
     ]
+
+-- |Q(s,x) for real x < 0
+qNeg s x = case properFraction s of
+    (sI, 0) | s > 0 -> exp (-x) * sum (scanl (*) 1 [x / fromIntegral k | k <- [1 .. sI-1]])
+    _               -> 0/0

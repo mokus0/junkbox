@@ -163,19 +163,17 @@ instance IncGamma Float where
 instance IncGamma Double where
     lowerGamma = lowerGammaHypGeom
     p s x
--- ?        | x < 0     = 
--- ?        | s <= 0    = 
+        | x < 0     = 1 - qNeg s x
         | x == 0    = 0
         | x >= s+1  = 1 - q s x
         | otherwise = pHypGeom s x
     
     q s x
--- ?        | x < 0     = 
--- ?        | s <= 0    = 
+        | x < 0     = qNeg s x
         | x == 0    = 1
         | x < s+1   = 1 - p s x
         | otherwise =
-            converge . concatMap (drop 2)
+            converge . concat
             $ modifiedLentz 1e-30 (qCF s x)
 
 -- |Factorial function
