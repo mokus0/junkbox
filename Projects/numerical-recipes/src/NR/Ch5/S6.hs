@@ -51,7 +51,7 @@ complexCubic = error "complexCubic: write me!"
 
 isZero abs coeffs x = abs y / big < 1e-14
     where
-        y = evalPoly (polyLE coeffs) x
+        y = evalPoly (poly LE coeffs) x
         big = sum (map abs coeffs) ^ 2
 
 realQuadratic_test    a b c = all (isZero abs       [c,b,a]) (quadratic        a b c)

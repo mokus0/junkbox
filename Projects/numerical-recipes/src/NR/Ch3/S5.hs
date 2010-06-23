@@ -11,7 +11,7 @@ import Data.STRef
 
 polyInterp table n = Interp table n (\tab j x -> fitPoly tab)
 
-fitPoly table = polyLE (V.toList (polcoe table))
+fitPoly table = poly LE (V.toList (polcoe table))
 
 polcoe table = runST $ do
     let n = GV.length table

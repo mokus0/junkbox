@@ -9,9 +9,9 @@ module Math.Polynomial.NumInstance where
 import Math.Polynomial
 
 instance Num a => Num (Poly a) where
-    fromInteger x = polyLE [fromInteger x]
+    fromInteger x = poly LE [fromInteger x]
     (+) = addPoly
-    negate = negatePoly
+    negate = fmap negate
     (*) = multPoly
 
     abs     = error    "abs cannot be defined for the Poly type"

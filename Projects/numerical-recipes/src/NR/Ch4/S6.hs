@@ -8,6 +8,7 @@
 module NR.Ch4.S6 where
 
 import Math.Polynomial
+import Math.Polynomial.Legendre
 
 import Control.Arrow
 import Control.Monad.Loops
@@ -16,7 +17,6 @@ import Data.STRef
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as MV
-import Math.Legendre
 
 -- |returns the integral of the function between the 2 points, by ten-point
 -- Gauss-Legendre integration.  The function is evaluated exactly 10 times

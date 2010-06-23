@@ -17,5 +17,7 @@ description:            I'm too lame to describe my project
 Library
   hs-source-dirs:       src
   exposed-modules:      Math.Polynomial
+                        Math.Polynomial.Legendre
                         Math.Polynomial.NumInstance
-  build-depends:        base >= 3 && <5, pretty
+  other-modules:        Math.Polynomial.Type
+  build-depends:        base >= 3 && <5, list-extras, pretty

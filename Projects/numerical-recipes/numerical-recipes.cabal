@@ -28,7 +28,6 @@ Library
   hs-source-dirs:       src
                         ../../Haskell
   exposed-modules:      Functions.Trim
-                        Math.Legendre
                         NR.Ch1.S4.Alias
                         NR.Ch1.S4.IMat
                         NR.Ch1.S4.IVec
