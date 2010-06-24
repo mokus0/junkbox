@@ -40,7 +40,18 @@ quotRemPoly (polyCoeffs BE -> u) (polyCoeffs BE -> v)
 quotPoly :: Fractional a => Poly a -> Poly a -> Poly a
 quotPoly u v = fst (quotRemPoly u v)
 remPoly :: Fractional a => Poly a -> Poly a -> Poly a
-remPoly  u v = snd (quotRemPoly u v)
+remPoly (polyCoeffs BE -> u) (polyCoeffs BE -> v)
+    = go u (length u - length v)
+    where
+        v0  | null v    = 0
+            | otherwise = head v
+        go u n
+            | null u || n < 0   = poly BE u
+            | otherwise         = go u' (n-1)
+            where
+                q0 = head u / v0
+                u' = tail (zipSum u (map (negate q0 *) v))
+
 
 -- like @zipWith (+)@ except that when the end of a list is
 -- reached, it is padded with 0's to match the length of the other list.

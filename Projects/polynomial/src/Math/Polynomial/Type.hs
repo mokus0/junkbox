@@ -5,7 +5,7 @@ module Math.Polynomial.Type
     , polyIsZero
     ) where
 
-import Data.List.Extras.LazyLength
+-- import Data.List.Extras.LazyLength
 import Data.Monoid
 
 -- dropEnd p = reverse . dropWhile p . reverse
@@ -66,6 +66,9 @@ instance (Num a, Eq a) => Eq (Poly a) where
         = polyCoeffs BE p == polyCoeffs BE p
         
 
+-- -- Ord would be nice for some purposes, but it really just doesn't
+-- -- make sense (there is no natural order that is much better than any
+-- -- other, AFAIK), so I'm leaving it out.
 -- instance (Num a, Ord a) => Ord (Poly a) where
 --     compare p q = mconcat
 --             [ lengthCompare pCoeffs qCoeffs
