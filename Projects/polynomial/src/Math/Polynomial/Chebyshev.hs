@@ -69,10 +69,10 @@ tRoots   n = [cos (pi / fromIntegral n * (fromIntegral k + 0.5)) | k <- [0..n-1]
 tExtrema :: Floating a => Int -> [a]
 tExtrema n = [cos (pi / fromIntegral n *  fromIntegral k       ) | k <- [0..n]]
 
--- |'chebyshevFit' returns a list of coefficients cs such that @f x@ ~= @sum
--- (zipWith (*) cs (evalTs x))@ on the interval -1 < x < 1.
+-- |@chebyshevFit n f@ returns a list of N coefficients @cs@ such that 
+-- @f x@ ~= @sum (zipWith (*) cs (evalTs x))@ on the interval -1 < x < 1.
 -- 
--- The N-1 roots of the N'th Chebyshev polynomial are the fitting points at 
+-- The N roots of the N'th Chebyshev polynomial are the fitting points at 
 -- which the function will be evaluated and at which the approximation will be
 -- exact.  These points always lie within the interval -1 < x < 1.  Outside
 -- this interval, the approximation will diverge quickly.
