@@ -44,3 +44,22 @@ evalLegendreDeriv :: Fractional a => Int -> a -> (a,a)
 evalLegendreDeriv 0 x = (1,0)
 evalLegendreDeriv n x = case drop (n-1) (evalLegendres x) of
     (p2:p1:_)   -> (p1, fromIntegral n * (x * p1 - p2) / (x*x - 1))
+
+-- |Zeroes of the n'th Legendre polynomial.
+legendreRoots :: (Fractional b, Ord b) => Int -> b -> [b]
+legendreRoots n eps = map negate mRoots ++ reverse (take (n-m) mRoots)
+    where
+        -- the roots are symmetric in the interval so we only have to find 'm' of them.
+        -- The rest are reflections.
+        m = (n + 1) `div` 2
+        mRoots = [improveRoot (z0 i) | i <- [0..m-1]]
+        
+        -- Initial guess for i'th root of the n'th Legendre polynomial
+        z0 i = realToFrac $ cos (pi * (fromIntegral i + 0.75) / (fromIntegral n + 0.5))
+        -- Improve estimate of a root by newton's method
+        improveRoot z1
+            | abs (z2-z1) <= eps    = z2
+            | otherwise             = improveRoot z2
+            where
+                (y, dy) = evalLegendreDeriv n z1
+                z2 = z1 - y/dy

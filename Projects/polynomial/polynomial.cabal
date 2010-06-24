@@ -17,6 +17,7 @@ description:            I'm too lame to describe my project
 Library
   hs-source-dirs:       src
   exposed-modules:      Math.Polynomial
+                        Math.Polynomial.Chebyshev
                         Math.Polynomial.Legendre
                         Math.Polynomial.NumInstance
                         Math.Polynomial.Pretty
