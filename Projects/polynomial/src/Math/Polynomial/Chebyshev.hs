@@ -2,6 +2,7 @@
 module Math.Polynomial.Chebyshev where
 
 import Math.Polynomial
+import Data.List
 
 -- |The Chebyshev polynomials of the first kind with 'Integer' coefficients.
 ts :: [Poly Integer]
@@ -68,18 +69,33 @@ tRoots   n = [cos (pi / fromIntegral n * (fromIntegral k + 0.5)) | k <- [0..n-1]
 tExtrema :: Floating a => Int -> [a]
 tExtrema n = [cos (pi / fromIntegral n *  fromIntegral k       ) | k <- [0..n]]
 
--- |Estimate the first N coefficients of the Chebyshev series expansion of a
--- given function.
+-- |'chebyshevFit' returns a list of coefficients cs such that @f x@ ~= @sum
+-- (zipWith (*) cs (evalTs x))@ on the interval -1 < x < 1.
+-- 
+-- The N-1 roots of the N'th Chebyshev polynomial are the fitting points at 
+-- which the function will be evaluated and at which the approximation will be
+-- exact.  These points always lie within the interval -1 < x < 1.  Outside
+-- this interval, the approximation will diverge quickly.
+--
+-- This function deviates from most chebyshev-fit implementations in that it
+-- returns the first coefficient pre-scaled so that the series evaluation 
+-- operation is a simple inner product, since in most other algorithms
+-- operating on chebyshev series, that factor is almost always a nuissance.
 chebyshevFit :: Floating a => Int -> (a -> a) -> [a]
 chebyshevFit n f = 
-    [ 2 / fromIntegral n * sum 
-        [ f x * evalT j x
-        | x <- tRoots n
-        ]
-    | j <- [0..n-1]
+    [ oneOrTwo / fromIntegral n 
+    * sum (zipWith (*) ts fxs)
+    | ts <- transpose txs
+    | oneOrTwo <- 1 : repeat 2
     ]
+    where
+        txs = map (take n . evalTs) xs
+        fxs = map f xs
+        xs = tRoots n
 
 -- |Evaluate a Chebyshev series expansion with a finite number of terms.
-evalChebyshevSeries :: Fractional a => [a] -> a -> a
-evalChebyshevSeries []      = \x -> 0
-evalChebyshevSeries (c0:cs) = \x -> sum (zipWith (*) (0.5 * c0 : cs) (evalTs x))
+-- 
+-- Note that this function expects the first coefficient to be pre-scaled
+-- by 1/2, which is what is produced by 'chebyshevFit'.
+evalChebyshevSeries :: Num a => [a] -> a -> a
+evalChebyshevSeries cs = \x -> sum (zipWith (*) cs (evalTs x))

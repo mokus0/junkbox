@@ -18,11 +18,14 @@ addPoly :: Num a => Poly a -> Poly a -> Poly a
 addPoly  (polyCoeffs LE ->  a) (polyCoeffs LE ->  b) = poly LE (zipSum a b) 
 
 multPoly :: Num a => Poly a -> Poly a -> Poly a
-multPoly (polyCoeffs LE -> xs) (polyCoeffs LE -> ys) = poly LE $ foldl zipSum []
-    [ map (x *) (shift ++ ys)
-    | x <- xs
-    | shift <- inits (repeat 0)
-    ]
+multPoly (polyCoeffs LE -> xs) (polyCoeffs LE -> ys) = poly LE $ multX ys
+    where
+        multX (0:ys) = 0:multX ys
+        multX ys = foldl zipSum []
+            [ shift ++ map (x *) ys
+            | (x, shift) <- zip xs (inits (repeat 0))
+            , x /= 0
+            ]
 
 quotRemPoly :: Fractional a => Poly a -> Poly a -> (Poly a, Poly a)
 quotRemPoly (polyCoeffs BE -> u) (polyCoeffs BE -> v)
