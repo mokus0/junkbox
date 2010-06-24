@@ -71,7 +71,6 @@ chebEvalM order Chebyshev{..} x = go order 0 0
         
         a = realToFrac chebA
         b = realToFrac chebB
-    
 
 chebEvalWith :: (Num a, Vector v a) => (a -> a -> a) -> Chebyshev v a a -> a -> a
 chebEvalWith (/) c = chebEvalMWith (/) (chebOrder c) c

@@ -71,31 +71,12 @@ integrateRange qRule f a0 a1
 -- eps will be approximately the accuracy of the integration method as well.
 gauleg x1 x2 n eps = GaussQ (x1, x2) table
     where
-        table = flip GV.map (legendreRoots n eps) $ \(z,dy) ->
+        roots = GV.fromList (legendreRoots n eps)
+        derivs = GV.map (snd . evalLegendreDeriv n) roots
+        
+        table = flip GV.map (GV.zip roots derivs) $ \(z,dy) ->
             ( {- abscissa -}    xm + xl * z
             , {- weight   -}    2 * xl / ((1 - z*z)*dy*dy)
             ) where
                 xm = 0.5*(x2+x1)
                 xl = 0.5*(x2-x1)
-
--- |Zeroes and corresponding derivatives of the n'th Legendre polynomial.  Signs
--- of derivatives are not necessarily right - the derivatives are squared in
--- 'gauleg' so the signs are not computed correctly here.
-legendreRoots n eps = GV.map (negate *** id) mRoots GV.++ GV.reverse (GV.take (n-m) mRoots)
-    where
-        -- the roots are symmetric in the interval so we only have to find 'm' of them.
-        -- The rest are reflections.  Sign on dz should be reflected too when n is even,
-        -- but it doesn't really matter since it is going to be squared anyway.
-        m = (n + 1) `div` 2
-        mRoots = GV.generate m z
-        z i = improveRoot (z0 i)
-        
-        -- Initial guess for i'th root of the n'th Legendre polynomial
-        z0 i = realToFrac $ cos (pi * (fromIntegral i + 0.75) / (fromIntegral n + 0.5))
-        -- Improve estimate of a root by newton's method
-        improveRoot z1
-            | abs (z2-z1) <= eps    = (z2, dy)
-            | otherwise             = improveRoot z2
-            where
-                (y, dy) = evalLegendreDeriv n z1
-                z2 = z1 - y/dy
