@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Math.Root.Finder.Brent
-    ( Brent
+    ( Brent, Eps(..)
     , brent
     ) where
 
@@ -21,6 +21,8 @@ data Brent a b = Brent
     , brE   :: a
     } deriving (Eq, Show)
 
+-- |This class really doesn't belong here, and will likely either move or
+-- disappear sometime.
 class Eps a where
     -- |Smallest number for which 1 + eps > 1
     eps :: a
@@ -36,20 +38,19 @@ instance (Eps a, Fractional a, Ord a) => RootFinder Brent a a where
     stepRootFinder f r@(Brent a fa b fb c fc _ e)
         |  abs fa > abs fb
         && abs e >= tol1
-        && 2 * p < max2p    = iquadStep
-        |  otherwise        = bisectStep
+        && 2 * p < max2p    = advance (p/q)
+        |  otherwise        = advance xm
         where
             -- Minimum step size and limits on 'p' to continue with inverse-quadratic interpolation
             tol1 = 2 * eps * (abs b + 0.5)
             max2p = min (3 * xm * q - abs (tol1 * q))
                         (abs (e * q))
             
-            -- Bisection step
-            bisectStep = advance xm
+            -- midpoint for bisection step
             xm = 0.5 * (c - b)
             
-            -- Inverse quadratic interpolation step
-            iquadStep = advance (p/q)
+            -- subdivision point for inverse quadratic interpolation step
+            -- (p/q)
             s = fb / fa
             p = abs p'
             q = if p' > 0 then negate q' else q'
