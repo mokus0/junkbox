@@ -10,15 +10,15 @@ ts = poly LE [1] :
     [ addPoly (poly LE [0, 1]    `multPoly` t_n)
               (poly LE [-1,0,1] `multPoly` u_n)
     | t_n <- ts
-    | u_n <- us
+    | u_n <- poly LE [0] : us
     ]
 
 -- The Chebyshev polynomials of the second kind with 'Integer' coefficients.
 us :: [Poly Integer]
-us = poly LE [0] : 
+us = 
     [ addPoly t_n (multPoly u_n (poly LE [0,1]))
     | t_n <- ts
-    | u_n <- us
+    | u_n <- poly LE [0] : us
     ]
 
 -- |Compute the coefficients of the n'th Chebyshev polynomial of the first kind.
@@ -56,7 +56,7 @@ evalTU n x = (ts!!n, us!!n)
 
 -- |Evaluate all the Chebyshev polynomials of the both kinds at a point X.
 evalTsUs :: Num a => a -> ([a], [a])
-evalTsUs x = (ts, us)
+evalTsUs x = (ts, tail us)
     where
         ts = 1 : [x * t_n - (1-x*x)*u_n  | t_n <- ts | u_n <- us]
         us = 0 : [x * u_n + t_n          | t_n <- ts | u_n <- us]
@@ -96,6 +96,14 @@ chebyshevFit n f =
 -- |Evaluate a Chebyshev series expansion with a finite number of terms.
 -- 
 -- Note that this function expects the first coefficient to be pre-scaled
--- by 1/2, which is what is produced by 'chebyshevFit'.
+-- by 1/2, which is what is produced by 'chebyshevFit'.  Thus, this computes
+-- a simple inner product of the given list with a matching-length sequence of
+-- chebyshev polynomials.
 evalChebyshevSeries :: Num a => [a] -> a -> a
-evalChebyshevSeries cs = \x -> sum (zipWith (*) cs (evalTs x))
+evalChebyshevSeries     []  _ = 0
+evalChebyshevSeries (c0:cs) x = 
+        let b1:b2:_ = reverse bs
+         in x*b1 - b2 + c0
+    where
+        -- Clenshaw's recurrence formula
+        bs = 0 : 0 : [2*x*b1 - b2 + c | b2:b1:_ <- tails bs | c <- reverse cs]

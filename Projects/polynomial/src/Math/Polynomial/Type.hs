@@ -2,12 +2,12 @@
 module Math.Polynomial.Type 
     ( Endianness(..)
     , Poly, poly, polyCoeffs
-    , polyIsZero
+    , polyIsZero, polyIsOne
     ) where
 
 -- import Data.List.Extras.LazyLength
-import Data.Monoid
 
+dropEnd :: (a -> Bool) -> [a] -> [a]
 -- dropEnd p = reverse . dropWhile p . reverse
 dropEnd p = go id
     where
@@ -17,11 +17,12 @@ dropEnd p = go id
             -- otherwise insert x and all stashed values in output and reset the stash
             | otherwise = t (x : go  id       xs)
         -- at end of string discard the stash
-        go t [] = []
+        go _ [] = []
 
+trim :: Num a => Poly a -> Poly a
 trim p@(Poly _ True _) = p
-trim p@(Poly LE _ cs) = Poly LE True (dropEnd   (==0) cs)
-trim p@(Poly BE _ cs) = Poly BE True (dropWhile (==0) cs)
+trim   (Poly LE _ cs) = Poly LE True (dropEnd   (==0) cs)
+trim   (Poly BE _ cs) = Poly BE True (dropWhile (==0) cs)
 
 -- |Make a 'Poly' from a list of coefficients using the specified coefficient order.
 poly :: Num a => Endianness -> [a] -> Poly a
@@ -36,6 +37,9 @@ polyCoeffs end p = case trim p of
 polyIsZero :: Num a => Poly a -> Bool
 polyIsZero = null . coeffs . trim
 
+polyIsOne :: Num a => Poly a -> Bool
+polyIsOne = ([1]==) . coeffs . trim
+
 data Endianness 
     = BE 
     -- ^ Big-Endian (head is highest-order term)
@@ -45,8 +49,8 @@ data Endianness
 
 data Poly a = Poly 
     { endianness :: !Endianness
-    , trimmed :: !Bool
-    , coeffs :: ![a]
+    , _trimmed   :: !Bool
+    , coeffs     :: ![a]
     }
 
 instance Num a => Show (Poly a) where

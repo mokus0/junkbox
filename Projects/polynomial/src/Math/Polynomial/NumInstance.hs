@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Math.Polynomial.NumInstance where
 
 -- |This module exports a 'Num' instance for the 'Poly' type.
@@ -9,7 +10,7 @@ module Math.Polynomial.NumInstance where
 import Math.Polynomial
 
 instance Num a => Num (Poly a) where
-    fromInteger x = poly LE [fromInteger x]
+    fromInteger i = poly LE [fromInteger i]
     (+) = addPoly
     negate = fmap negate
     (*) = multPoly

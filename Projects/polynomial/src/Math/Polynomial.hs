@@ -1,18 +1,36 @@
 {-# LANGUAGE ParallelListComp, ViewPatterns #-}
 module Math.Polynomial
     ( Endianness(..)
-    , Poly, poly, polyCoeffs, polyIsZero
-    , addPoly, multPoly
+    , Poly, poly, polyCoeffs, polyIsZero, polyIsOne
+    , zero, one, x
+    , scalePoly, negatePoly
+    , addPoly, multPoly, powPoly
     , quotRemPoly, quotPoly, remPoly
     , evalPoly, evalPolyDeriv, evalPolyDerivs
     , contractPoly
     , gcdPoly
+    , polyDeriv, polyIntegral
     ) where
 
 import Math.Polynomial.Type
 import Math.Polynomial.Pretty ({- instance -})
 
 import Data.List
+
+zero :: Num a => Poly a
+zero = poly LE []
+
+one :: Num a => Poly a
+one = poly LE [1]
+
+x :: Num a => Poly a
+x = poly LE [0,1]
+
+scalePoly :: Num a => a -> Poly a -> Poly a
+scalePoly s p = fmap (s*) p
+
+negatePoly :: Num a => Poly a -> Poly a
+negatePoly = fmap negate
 
 addPoly :: Num a => Poly a -> Poly a -> Poly a
 addPoly  (polyCoeffs LE ->  a) (polyCoeffs LE ->  b) = poly LE (zipSum a b) 
@@ -26,6 +44,13 @@ multPoly (polyCoeffs LE -> xs) (polyCoeffs LE -> ys) = poly LE $ multX ys
             | (x, shift) <- zip xs (inits (repeat 0))
             , x /= 0
             ]
+
+powPoly :: (Num a, Integral b) => Poly a -> b -> Poly a
+powPoly _ 0 = poly LE [1]
+powPoly p 1 = p
+powPoly p n
+    | odd n     = p `multPoly` powPoly p (n-1)
+    | otherwise = (\x -> multPoly x x) (powPoly p (n`div`2))
 
 quotRemPoly :: Fractional a => Poly a -> Poly a -> (Poly a, Poly a)
 quotRemPoly (polyCoeffs BE -> u) (polyCoeffs BE -> v)
@@ -58,6 +83,7 @@ remPoly (polyCoeffs BE -> u) (polyCoeffs BE -> v)
 
 -- like @zipWith (+)@ except that when the end of a list is
 -- reached, it is padded with 0's to match the length of the other list.
+zipSum :: Num t => [t] -> [t] -> [t]
 zipSum xs [] = xs
 zipSum [] ys = ys
 zipSum (x:xs) (y:ys) = (x+y) : zipSum xs ys
@@ -73,24 +99,66 @@ evalPolyDeriv (polyCoeffs LE -> cs) x = foldr mul (0,0) cs
         mul c (p, dp) = (p * x + c, dp * x + p)
 
 evalPolyDerivs :: Num a => Poly a -> a -> [a]
-evalPolyDerivs (polyCoeffs LE -> cs) x = trunc . zipWith (*) factorials $ foldr mul (repeat 0) (zip cs [0..])
+evalPolyDerivs (polyCoeffs LE -> cs) x = trunc . zipWith (*) factorials $ foldr mul [] cs
     where
         trunc list = zipWith const list cs
         factorials = scanl (*) 1 (iterate (+1) 1)
-        mul (c, i) pds@(p:pd) = (p * x + c) : map (x *) pd `zipSum` pds
+        mul c pds@(p:pd) = (p * x + c) : map (x *) pd `zipSum` pds
+        mul c [] = [c]
 
 -- |\"Contract\" a polynomial by attempting to divide out a root.
 --
 -- @contractPoly p a@ returns @(q,r)@ such that @q*(x-a) + r == p@
 contractPoly :: Num a => Poly a -> a -> (Poly a, a)
 contractPoly (polyCoeffs LE -> cs) a = (poly LE q, r)
-    where 
-        (r,q) = mapAccumR (\rem swap -> (swap + rem * a, rem)) 0 cs
+    where
+        cut remainder swap = (swap + remainder * a, remainder)
+        (r,q) = mapAccumR cut 0 cs
 
 gcdPoly :: Fractional a => Poly a -> Poly a -> Poly a
 gcdPoly a (polyIsZero -> True)      =  monic a
 gcdPoly a b                         =  gcdPoly b (a `remPoly` b)
 
+-- |Normalize a polynomial so that its highest-order coefficient is 1
+monic :: Fractional a => Poly a -> Poly a
 monic p = case polyCoeffs BE p of
     []      -> poly BE []
-    (x:xs)  -> poly BE (1:map (/x) xs)
+    (c:cs)  -> poly BE (1:map (/c) cs)
+
+
+polyDeriv :: Num a => Poly a -> Poly a
+polyDeriv (polyCoeffs LE -> cs) = poly LE
+    [ c * n
+    | c <- tail cs
+    | n <- iterate (1+) 1
+    ]
+
+polyIntegral :: Fractional a => Poly a -> Poly a
+polyIntegral (polyCoeffs LE -> cs) = poly LE $ 0 :
+    [ c / n
+    | c <- cs
+    | n <- iterate (1+) 1
+    ]
+
+-- Interesting operations that may or may not be included:
+
+-- |Separate a polynomial into a set of factors none of which have
+-- multiple roots, and the product of which is the original polynomial.
+-- Note that if division is not exact, it may fail to separate roots.  
+-- Rational coefficients is a good idea.
+--
+-- Useful when applicable as a way to simplify root-finding problems.
+_separateRoots :: Fractional a => Poly a -> [Poly a]
+_separateRoots p
+    | polyIsOne q   = [p]
+    | otherwise     = p `quotPoly` q : _separateRoots q
+    where
+        q = gcdPoly p (polyDeriv p)
+
+-- |Assemble a polynomial that has the given set of roots, which may contain
+-- duplicates.  Mostly just here to generate test inputs for 'separateRoots'.
+_polyWithRoots :: Num a => [a] -> Poly a
+_polyWithRoots rs = foldl multPoly (poly LE [1])
+    [ poly BE [1,-r]
+    | r <- rs
+    ]

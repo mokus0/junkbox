@@ -15,10 +15,15 @@ synopsis:               I'm too lame to describe my project
 description:            I'm too lame to describe my project
 
 Library
+  ghc-options:          -Wall -fno-warn-name-shadowing
   hs-source-dirs:       src
   exposed-modules:      Math.Polynomial
+                        Math.Polynomial.Bernstein
                         Math.Polynomial.Chebyshev
+                        Math.Polynomial.Interpolation
+                        Math.Polynomial.Lagrange
                         Math.Polynomial.Legendre
+                        Math.Polynomial.Newton
                         Math.Polynomial.NumInstance
                         Math.Polynomial.Pretty
   other-modules:        Math.Polynomial.Type

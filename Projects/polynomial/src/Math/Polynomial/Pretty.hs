@@ -1,4 +1,10 @@
-{-# LANGUAGE ParallelListComp, FlexibleInstances, FlexibleContexts, IncoherentInstances, ViewPatterns #-}
+{-# LANGUAGE 
+        ParallelListComp, ViewPatterns,
+        FlexibleInstances, FlexibleContexts, IncoherentInstances
+  #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-type-defaults #-}
 -- This code is a big ugly mess, but it more or less works.  Someday I might
 -- get around to cleaning it up.
 module Math.Polynomial.Pretty () where
@@ -41,11 +47,11 @@ parenSep p xs =
     prettyParen (p && not (null (drop 1 xs)))   
         (hsep xs)
 
-pPrintOrdTerm num v f 0 e = empty
-pPrintOrdTerm num v f c 0 = sign f c <> num (abs c)
-pPrintOrdTerm num v f c 1   | abs c == 1    = sign f c <> char v
+pPrintOrdTerm   _ _ _ 0 _ = empty
+pPrintOrdTerm num _ f c 0 = sign f c <> num (abs c)
+pPrintOrdTerm   _ v f c 1   | abs c == 1    = sign f c <> char v
 pPrintOrdTerm num v f c 1 = sign f c <> num (abs c) <> char v
-pPrintOrdTerm num v f c e   | abs c == 1    = sign f c <> char v <> text "^" <> int e
+pPrintOrdTerm   _ v f c e   | abs c == 1    = sign f c <> char v <> text "^" <> int e
 pPrintOrdTerm num v f c e = sign f c <> num (abs c) <> char v <> text "^" <> int e
 
 sign True x
@@ -55,10 +61,10 @@ sign False x
     | x < 0     = text "- "
     | otherwise = text "+ "
 
-pPrintUnOrdTerm num v f 0 e = empty
-pPrintUnOrdTerm num v f c 0 = sign f 1 <> num c
-pPrintUnOrdTerm num v f 1 1 = sign f 1 <> char v
+pPrintUnOrdTerm   _ _ _ 0 _ = empty
+pPrintUnOrdTerm num _ f c 0 = sign f 1 <> num c
+pPrintUnOrdTerm   _ v f 1 1 = sign f 1 <> char v
 pPrintUnOrdTerm num v f c 1 = sign f 1 <> num c <> char v
-pPrintUnOrdTerm num v f 1 e = sign f 1 <> char v <> text "^" <> int e
+pPrintUnOrdTerm   _ v f 1 e = sign f 1 <> char v <> text "^" <> int e
 pPrintUnOrdTerm num v f c e = sign f 1 <> num c <> char v <> text "^" <> int e
 
