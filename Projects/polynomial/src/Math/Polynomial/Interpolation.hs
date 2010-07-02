@@ -1,7 +1,6 @@
 {-# LANGUAGE ParallelListComp #-}
 module Math.Polynomial.Interpolation where
 
-import Math.Polynomial
 import Data.List
 
 -- |Evaluate a polynomial passing through the specified set of points.  The
