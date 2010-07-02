@@ -62,10 +62,6 @@ Library
                         NR.Ch5.S9
                         NR.Ch6.S1
                         NR.Ch6.S2
-                        NR.Ch9.S1
-                        NR.Ch9.S2
-                        NR.Ch9.S3
-                        NR.Ch9.S4
 
   build-depends:        base == 4.*, 
                         containers == 0.3.*,

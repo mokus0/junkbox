@@ -1,7 +1,12 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
-module NR.Ch9.S3 where
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+module Math.Root.Finder.Brent
+    ( Brent
+    , brent
+    ) where
 
-import NR.Ch9.S1
+import Math.Root.Bracket
+import Math.Root.Finder
 import Data.Maybe
 import Text.Printf
 
@@ -28,7 +33,7 @@ instance (Eps a, Fractional a, Ord a) => RootFinder Brent a a where
     initRootFinder f x1 x2 = fixMagnitudes (Brent x1 f1 x2 f2 x1 f1 dx dx)
         where f1 = f x1; f2 = f x2; dx = x2 - x1
     
-    stepRootFinder f r@(Brent a fa b fb c fc d e)
+    stepRootFinder f r@(Brent a fa b fb c fc _ e)
         |  abs fa > abs fb
         && abs e >= tol1
         && 2 * p < max2p    = iquadStep
@@ -40,11 +45,11 @@ instance (Eps a, Fractional a, Ord a) => RootFinder Brent a a where
                         (abs (e * q))
             
             -- Bisection step
-            bisectStep = advance xm xm
+            bisectStep = advance xm
             xm = 0.5 * (c - b)
             
             -- Inverse quadratic interpolation step
-            iquadStep = advance (p/q) d
+            iquadStep = advance (p/q)
             s = fb / fa
             p = abs p'
             q = if p' > 0 then negate q' else q'
@@ -56,20 +61,20 @@ instance (Eps a, Fractional a, Ord a) => RootFinder Brent a a where
                                       )
             
             -- Actual advancement used for both steps
-            advance d e = reorder r{brA = b, brFA = fb, brB = b', brFB = f b'}
+            advance d = reorder r{brA = b, brFA = fb, brB = b', brFB = f b'}
                 where
                     b' = if abs d > tol1 then b + d else b + abs tol1 * signum xm
 
 
-    estimateRoot  Brent{brB = b, brC = c} = b
+    estimateRoot  Brent{brB = b}          = b
     estimateError Brent{brB = b, brC = c} = c - b
     converged   _ Brent{brFB = 0}   = True
     converged tol br@Brent{brB = b} = abs (estimateError br) <= tol1
         where
             tol1 = 4 * eps * abs b + tol
 
-zbrent :: (Eps a, Ord a, Fractional a) => (a -> a) -> a -> a -> a -> Either (Brent a a) a
-zbrent f x1 x2 xacc = fmap estimateRoot (findRoot f x1 x2 xacc)
+brent :: (Eps a, Ord a, Fractional a) => (a -> a) -> a -> a -> a -> Either (Brent a a) a
+brent f x1 x2 xacc = fmap estimateRoot (findRoot f x1 x2 xacc)
 
 -- on input, (a,c) are prev bracket, b is new guess.
 -- on output, b and c bracket the root and |f(b)| <= |f(c)|
@@ -92,6 +97,7 @@ reorder = fixMagnitudes . fixSigns
 -- step was taken).  In the latter case, discard C and use A in its place, because
 -- c and fc are both (by the existing invariants - (a,c) bracket, |f(c)| >= |f(a)|) 
 -- outside the new region of interest.
+fixSigns :: (Num a, Num b, Ord b) => Brent a b -> Brent a b
 fixSigns br@Brent{ brA  =  a, brB  =  b
                  , brFA = fa, brFB = fb, brFC = fc }
     |  (fb > 0 && fc > 0) || (fb < 0 && fc < 0)
@@ -105,6 +111,7 @@ fixSigns br@Brent{ brA  =  a, brB  =  b
 -- Establish invariant that |f(c)| >= |f(b)|.
 -- If it is not already so, reset 'a' as well to ensure 'fa' falls
 -- between fb and fc.
+fixMagnitudes :: (Num b, Ord b) => Brent a b -> Brent a b
 fixMagnitudes br@Brent{ brC  =  c, brB  =  b
                       , brFC = fc, brFB = fb }
     | abs fc < abs fb
@@ -116,7 +123,11 @@ fixMagnitudes br@Brent{ brC  =  c, brB  =  b
     = br
 
 -- |debugging function to show a nice trace of the progress of the algorithm
-traceBrent f mbRange = do
+_traceBrent :: (PrintfArg a, Ord a, Fractional a, Eps a,
+                PrintfArg b, Ord b, Num b,
+                RootFinder Brent a b) =>
+               (a -> b) -> Maybe (a, a) -> IO ()
+_traceBrent f mbRange = do
     xs <- sequence
         [ put br >> return br
         | br <- traceRoot f x0 x1 (Just eps)
@@ -125,7 +136,7 @@ traceBrent f mbRange = do
     putStrLn "(converged)"
     go (last xs)
     where 
-        (x0,x1) = fromMaybe (last (zbrac f 0 1)) mbRange
+        (x0,x1) = fromMaybe (last (bracket f 0 1)) mbRange
         put Brent{brA=a, brB=b, brC=c, brFA=fa, brFB=fb, brFC=fc} = 
             putStrLn . map fixPlus $
             printf (concat (replicate 6 "%-+25g")) a b c fa fb fc

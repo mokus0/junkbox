@@ -1,7 +1,9 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
-module NR.Ch9.S4 where
+module Math.Root.Finder.Newton
+    ( Newton, newton
+    ) where
 
-import NR.Ch9.S1
+import Math.Root.Finder
 
 data Newton a b = Newton
     { newtRTN   :: !a
@@ -20,3 +22,8 @@ instance Fractional a => RootFinder Newton a (a,a) where
     
     estimateRoot Newton{newtRTN = rtn} = rtn
     estimateError Newton{newtDX = dx}  = dx    
+
+-- | Using Newton's method, return a root of a function known
+-- to lie between x1 and x2.  The root is refined until its accuracy is += xacc.
+newton :: (Ord a, Fractional a) => (a -> (a, a)) -> a -> a -> a -> Either (Newton a (a,a)) a
+newton f x1 x2 xacc = fmap estimateRoot (findRoot f x1 x2 xacc)
