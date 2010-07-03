@@ -1,4 +1,5 @@
 {-# LANGUAGE ParallelListComp, ViewPatterns #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Math.Polynomial
     ( Endianness(..)
     , Poly, poly, polyCoeffs, polyIsZero, polyIsOne
@@ -15,10 +16,12 @@ module Math.Polynomial
 import Math.Polynomial.Type
 import Math.Polynomial.Pretty ({- instance -})
 
+import Data.AdditiveGroup
 import Data.List
+import Data.List.ZipSum
 
 zero :: Num a => Poly a
-zero = poly LE []
+zero = zeroV
 
 one :: Num a => Poly a
 one = poly LE [1]
@@ -30,10 +33,10 @@ scalePoly :: Num a => a -> Poly a -> Poly a
 scalePoly s p = fmap (s*) p
 
 negatePoly :: Num a => Poly a -> Poly a
-negatePoly = fmap negate
+negatePoly = negateV
 
 addPoly :: Num a => Poly a -> Poly a -> Poly a
-addPoly  (polyCoeffs LE ->  a) (polyCoeffs LE ->  b) = poly LE (zipSum a b) 
+addPoly = (^+^)
 
 sumPolys :: Num a => [Poly a] -> Poly a
 sumPolys [] = zero
@@ -84,13 +87,6 @@ remPoly (polyCoeffs BE -> u) (polyCoeffs BE -> v)
                 q0 = head u / v0
                 u' = tail (zipSum u (map (negate q0 *) v))
 
-
--- like @zipWith (+)@ except that when the end of a list is
--- reached, it is padded with 0's to match the length of the other list.
-zipSum :: Num t => [t] -> [t] -> [t]
-zipSum xs [] = xs
-zipSum [] ys = ys
-zipSum (x:xs) (y:ys) = (x+y) : zipSum xs ys
 
 evalPoly :: Num a => Poly a -> a -> a
 evalPoly (polyCoeffs LE -> cs) x = foldr mul 0 cs

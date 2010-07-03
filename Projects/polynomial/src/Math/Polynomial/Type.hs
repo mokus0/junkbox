@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ViewPatterns, TypeFamilies #-}
 module Math.Polynomial.Type 
     ( Endianness(..)
     , Poly, poly, polyCoeffs
@@ -6,6 +6,13 @@ module Math.Polynomial.Type
     ) where
 
 -- import Data.List.Extras.LazyLength
+import Data.AdditiveGroup
+import Data.VectorSpace
+import Data.Cross
+import Data.Basis
+import Data.List
+import Data.List.ZipSum
+import Data.Word
 
 dropEnd :: (a -> Bool) -> [a] -> [a]
 -- dropEnd p = reverse . dropWhile p . reverse
@@ -84,3 +91,20 @@ instance (Num a, Eq a) => Eq (Poly a) where
 
 instance Functor Poly where
     fmap f (Poly end _ cs) = Poly end False (map f cs)
+
+instance Num a => AdditiveGroup (Poly a) where
+    zeroV = poly LE []
+    (polyCoeffs LE ->  a) ^+^ (polyCoeffs LE ->  b) = poly LE (zipSum a b)
+    negateV = fmap negate
+
+instance Num a => VectorSpace (Poly a) where
+    type Scalar (Poly a) = a
+    (*^) s = fmap (*s)
+
+instance Num a => HasBasis (Poly a) where
+    type Basis (Poly a) = Word
+    basisValue n = poly BE (1 : genericReplicate n 0)
+    decompose = zip [0..] . polyCoeffs LE
+    decompose' v n = case genericDrop n (polyCoeffs LE v) of
+        []      -> 0
+        (x:_)   -> x

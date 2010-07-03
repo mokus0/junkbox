@@ -26,5 +26,7 @@ Library
                         Math.Polynomial.Newton
                         Math.Polynomial.NumInstance
                         Math.Polynomial.Pretty
-  other-modules:        Math.Polynomial.Type
-  build-depends:        base >= 3 && <5, pretty, prettyclass
+  other-modules:        Data.List.ZipSum
+                        Math.Polynomial.Type
+                        
+  build-depends:        base >= 3 && <5, pretty, prettyclass, vector-space
