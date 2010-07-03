@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Math.Root.Finder.Brent
-    ( Brent, Eps(..)
+    ( Brent
     , brent
     ) where
 
@@ -21,17 +21,13 @@ data Brent a b = Brent
     , brE   :: a
     } deriving (Eq, Show)
 
--- |This class really doesn't belong here, and will likely either move or
--- disappear sometime.
-class Eps a where
-    -- |Smallest number for which 1 + eps > 1
-    eps :: a
-
-instance Eps Double where eps = encodeFloat 1 (-52)
-instance Eps Float  where eps = encodeFloat 1 (-23)
+eps :: RealFloat a => a
+eps = eps'
+    where
+        eps' = encodeFloat 1 (1 - floatDigits eps')
 
 -- TODO: clean up this mess!
-instance (Eps a, Fractional a, Ord a) => RootFinder Brent a a where
+instance RealFloat a => RootFinder Brent a a where
     initRootFinder f x1 x2 = fixMagnitudes (Brent x1 f1 x2 f2 x1 f1 dx dx)
         where f1 = f x1; f2 = f x2; dx = x2 - x1
     
@@ -74,7 +70,7 @@ instance (Eps a, Fractional a, Ord a) => RootFinder Brent a a where
         where
             tol1 = 4 * eps * abs b + tol
 
-brent :: (Eps a, Ord a, Fractional a) => (a -> a) -> a -> a -> a -> Either (Brent a a) a
+brent :: RealFloat a => (a -> a) -> a -> a -> a -> Either (Brent a a) a
 brent f x1 x2 xacc = fmap estimateRoot (findRoot f x1 x2 xacc)
 
 -- on input, (a,c) are prev bracket, b is new guess.
@@ -124,7 +120,7 @@ fixMagnitudes br@Brent{ brC  =  c, brB  =  b
     = br
 
 -- |debugging function to show a nice trace of the progress of the algorithm
-_traceBrent :: (PrintfArg a, Ord a, Fractional a, Eps a,
+_traceBrent :: (PrintfArg a, RealFloat a,
                 PrintfArg b, Ord b, Num b,
                 RootFinder Brent a b) =>
                (a -> b) -> Maybe (a, a) -> IO ()
