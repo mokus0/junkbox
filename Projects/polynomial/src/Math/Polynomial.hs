@@ -4,11 +4,11 @@ module Math.Polynomial
     , Poly, poly, polyCoeffs, polyIsZero, polyIsOne
     , zero, one, x
     , scalePoly, negatePoly
-    , addPoly, multPoly, powPoly
+    , addPoly, sumPolys, multPoly, powPoly
     , quotRemPoly, quotPoly, remPoly
     , evalPoly, evalPolyDeriv, evalPolyDerivs
     , contractPoly
-    , gcdPoly
+    , gcdPoly, separateRoots
     , polyDeriv, polyIntegral
     ) where
 
@@ -34,6 +34,10 @@ negatePoly = fmap negate
 
 addPoly :: Num a => Poly a -> Poly a -> Poly a
 addPoly  (polyCoeffs LE ->  a) (polyCoeffs LE ->  b) = poly LE (zipSum a b) 
+
+sumPolys :: Num a => [Poly a] -> Poly a
+sumPolys [] = zero
+sumPolys ps = poly LE (foldl1 zipSum (map (polyCoeffs LE) ps))
 
 multPoly :: Num a => Poly a -> Poly a -> Poly a
 multPoly (polyCoeffs LE -> xs) (polyCoeffs LE -> ys) = poly LE $ multX ys
@@ -140,25 +144,15 @@ polyIntegral (polyCoeffs LE -> cs) = poly LE $ 0 :
     | n <- iterate (1+) 1
     ]
 
--- Interesting operations that may or may not be included:
-
 -- |Separate a polynomial into a set of factors none of which have
 -- multiple roots, and the product of which is the original polynomial.
 -- Note that if division is not exact, it may fail to separate roots.  
 -- Rational coefficients is a good idea.
 --
 -- Useful when applicable as a way to simplify root-finding problems.
-_separateRoots :: Fractional a => Poly a -> [Poly a]
-_separateRoots p
+separateRoots :: Fractional a => Poly a -> [Poly a]
+separateRoots p
     | polyIsOne q   = [p]
-    | otherwise     = p `quotPoly` q : _separateRoots q
+    | otherwise     = p `quotPoly` q : separateRoots q
     where
         q = gcdPoly p (polyDeriv p)
-
--- |Assemble a polynomial that has the given set of roots, which may contain
--- duplicates.  Mostly just here to generate test inputs for 'separateRoots'.
-_polyWithRoots :: Num a => [a] -> Poly a
-_polyWithRoots rs = foldl multPoly (poly LE [1])
-    [ poly BE [1,-r]
-    | r <- rs
-    ]

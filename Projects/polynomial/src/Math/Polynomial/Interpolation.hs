@@ -1,6 +1,8 @@
 {-# LANGUAGE ParallelListComp #-}
 module Math.Polynomial.Interpolation where
 
+import Math.Polynomial
+import Math.Polynomial.Lagrange
 import Data.List
 
 -- |Evaluate a polynomial passing through the specified set of points.  The
@@ -52,3 +54,34 @@ nevilleDiffs xys x = table
             | x_is <- tail (tails xs)
             , not (null x_is)
             ]
+
+-- |Fit a polynomial to a set of points by iteratively evaluating the 
+-- interpolated polynomial (using 'polyInterp') at 0 to establish the
+-- constant coefficient and reducing the polynomial by subtracting that
+-- coefficient from all y's and dividing by their corresponding x's.
+-- 
+-- Slower than 'lagrangePolyFit' but stable under different sets of 
+-- conditions.
+iterativePolyFit :: Fractional a => [(a,a)] -> Poly a
+iterativePolyFit = poly LE . loop
+    where
+        loop  [] = []
+        loop xys = c0 : loop (drop 1 xys')
+            where
+                c0   = polyInterp xys 0
+                xys' = 
+                    [ (x,(y - c0) / x)
+                    | (x,y) <- xys
+                    ]
+
+-- |Fit a polynomial to a set of points using barycentric Lagrange polynomials.
+lagrangePolyFit :: Fractional a => [(a,a)] -> Poly a
+lagrangePolyFit xys = sumPolys
+    [ scalePoly f (fst (contractPoly p x))
+    | f <- zipWith (/) ys phis
+    | x <- xs
+    ]
+    where
+        (xs,ys) = unzip xys
+        p = lagrange xs
+        phis = map (snd . evalPolyDeriv p) xs

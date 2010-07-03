@@ -5,8 +5,10 @@ module Math.Polynomial.Lagrange
     , lagrangeWeights
     ) where
 
-import Math.Polynomial (Poly, poly, Endianness(..), multPoly)
+import Math.Polynomial
 
+-- given a list, return one list containing each element of the original list
+-- paired with all the other elements of the list.
 select :: [a] -> [(a,[a])]
 select [] = []
 select (x:xs) = (x, xs) : [(y, x:ys) | (y, ys) <- select xs]
@@ -22,6 +24,7 @@ lagrangeBasis xs =
     ]
 
 lagrange :: Num a => [a] -> Poly a
+lagrange [] = one
 lagrange xs = foldl1 multPoly
     [ poly LE [negate x_i, 1]
     | x_i <- xs
