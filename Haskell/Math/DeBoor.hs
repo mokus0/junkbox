@@ -11,22 +11,23 @@ deBoor _ _  _ [] = []
 deBoor _ _ [] ds = [ds]
 deBoor n x us ds = ds : deBoor (n-1) x (tail us) ds'
     where
-        u_js = drop n us
-        ds' = zipWith4 (interp x) us u_js ds (tail ds)
+        ds' = zipWith4 (interp x) us (drop n us)
+                                  ds (tail   ds)
 
-bspline n x us ds 
-    | l   < 0   = outside
-    | l+1 < n   = error "bspline: not enough knots below x"
-    | l+n > length us
-                = error "bspline: not enough knots above x"
-    | l >= length ds
-                = error "bspline: not enough control points"
-    | otherwise = deBoor n x us ds !! n !! (l-n+1)
+-- Note: defines the spline on a larger domain than is traditional - extends past
+-- the ends by extrapolating the end segments.  This is to avoid problems with
+-- minor errors in the input parameter, especially in cases where the first
+-- or last knot is not an IEEE-exact number.  It is up to the user to decide 
+-- precisely what domain is appropriate and only evaluate inside that domain.
+--
+-- Note 2: I'm not 100% sure the bounds checking is right.
+bspline n us ds
+    | lastSegment < 0   = error "bspline: not enough control points"
+    | otherwise         = \x -> deBoor n x us ds !! n !! segment x
     where
-        outside = error "bspline: x outside knot vector"
-        
-        l = case findIndex (> x) us of
-            Nothing -> case findIndex (== x) us of
-                Nothing -> outside
-                Just i -> i-1
-            Just i  -> i-1
+        lastSegment = min (length us) (length ds) - n - 2
+        segment x   = clip 0 lastSegment (count (<x) us - n)
+
+-- a couple very general utility functions
+count p = length . filter p
+clip lo hi = max lo . min hi
