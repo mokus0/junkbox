@@ -1,46 +1,32 @@
-{-# LANGUAGE ParallelListComp #-}
 module Math.DeBoor where
 
 import Data.List
 import Data.VectorSpace
 
-interp a x y = (1-a) *^ x ^+^ a *^ y
-
-alphas n x us = zipWith take 
-    [n, n-1 .. 1]
-    [ [ (x - u_i) / (u_j - u_i)
-      | u_i <- u_is
-      | u_j <- drop n us
-      ]
-    | u_is <- tails us
-    ]
-
-deBoor n x us ds = table
+interp t lo hi x y = lerp x y a
     where
-        table = take (n+1) ds :
-            [ [ interp alpha d0 d1
-              | alpha <- alpha_ks
-              | d0:d1:_ <- tails row
-              ]
-            | alpha_ks <- alphas n x us
-            | row <- table
-            ]
+        a = (t - lo) / (hi - lo)
+
+deBoor _ _  _ [] = []
+deBoor _ _ [] ds = [ds]
+deBoor n x us ds = ds : deBoor (n-1) x (tail us) ds'
+    where
+        u_js = drop n us
+        ds' = zipWith4 (interp x) us u_js ds (tail ds)
 
 bspline n x us ds 
-    | l   < 0   = error "bspline: x outside knot vector"
+    | l   < 0   = outside
     | l+1 < n   = error "bspline: not enough knots below x"
-    | l+n >= length us
+    | l+n > length us
                 = error "bspline: not enough knots above x"
     | l >= length ds
                 = error "bspline: not enough control points"
-    | otherwise = head . last $ deBoor n x us' ds'
+    | otherwise = deBoor n x us ds !! n !! (l-n+1)
     where
-        us' = drop (l-n+1) us
-        ds' = drop (l-n+1) ds
+        outside = error "bspline: x outside knot vector"
         
         l = case findIndex (> x) us of
             Nothing -> case findIndex (== x) us of
-                Nothing -> error "bspline: x outside knot vector"
+                Nothing -> outside
                 Just i -> i-1
             Just i  -> i-1
-        
