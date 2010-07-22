@@ -28,6 +28,17 @@ bspline n us ds
         lastSegment = min (length us) (length ds) - n - 2
         segment x   = clip 0 lastSegment (count (<x) us - n)
 
+--nurbs :: (VectorSpace v, Fractional (Scalar v)) 
+--      => Int -> [Scalar v] -> [(v, Scalar v)] -> Scalar v -> v
+nurbs
+  :: (VectorSpace v, Scalar v ~ s,
+      VectorSpace s, Scalar s ~ s, Fractional s, Ord s) =>
+     Int -> [s] -> [(v, s)] -> s -> v
+nurbs n us dws = project . bspline n us (map homogenize dws)
+    where
+        project (p,w) = recip w *^ p
+        homogenize (d,w) = (w *^ d, w)
+
 -- a couple very general utility functions
 count p = length . filter p
 clip lo hi = max lo . min hi
