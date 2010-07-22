@@ -3,16 +3,31 @@ module Math.DeBoor where
 import Data.List
 import Data.VectorSpace
 
-interp t lo hi x y = lerp x y a
+interp t lo hi x y
+    | hi == lo  = if t < hi then x else y
+    | otherwise = lerp x y a
     where
         a = (t - lo) / (hi - lo)
 
-deBoor _ _  _ [] = []
-deBoor _ _ [] ds = [ds]
-deBoor n x us ds = ds : deBoor (n-1) x (tail us) ds'
+deBoor n x us ds = go us ds
     where
-        ds' = zipWith4 (interp x) us (drop n us)
-                                  ds (tail   ds)
+        uHi = drop n us
+        
+        go   _ [] = []
+        go uLo ds = ds : go (drop 1 uLo) ds'
+            where
+                ds' = zipWith4 (interp x) uLo uHi
+                                          ds (tail ds)
+        
+-- -- Slightly more readable form, slightly less efficient
+-- -- and subtly "wrong" when evaluating past row n, which 
+-- -- shouldn't be done anyway.
+-- deBoor _ _  _ [] = []
+-- deBoor _ _ [] ds = [ds]
+-- deBoor n x us ds = ds : deBoor (n-1) x (tail us) ds'
+--     where
+--         ds' = zipWith4 (interp x) us (drop n us)
+--                                   ds (tail   ds)
 
 -- Note: defines the spline on a larger domain than is traditional - extends past
 -- the ends by extrapolating the end segments.  This is to avoid problems with
@@ -28,8 +43,10 @@ bspline n us ds
         lastSegment = min (length us) (length ds) - n - 2
         segment x   = clip 0 lastSegment (count (<x) us - n)
 
---nurbs :: (VectorSpace v, Fractional (Scalar v)) 
---      => Int -> [Scalar v] -> [(v, Scalar v)] -> Scalar v -> v
+-- a couple very general utility functions
+count p = length . filter p
+clip lo hi = max lo . min hi
+
 nurbs
   :: (VectorSpace v, Scalar v ~ s,
       VectorSpace s, Scalar s ~ s, Fractional s, Ord s) =>
@@ -39,6 +56,19 @@ nurbs n us dws = project . bspline n us (map homogenize dws)
         project (p,w) = recip w *^ p
         homogenize (d,w) = (w *^ d, w)
 
--- a couple very general utility functions
-count p = length . filter p
-clip lo hi = max lo . min hi
+-- Example: a NURBS circle (0 <= x <= 1)
+circle = nurbs 2 us ds
+    where
+        us = [0,0,0,0.25,0.25,0.5,0.5,0.75,0.75,1,1,1]
+        ds = [ ((-1,-1),w)
+             , ((-1, 0),1)
+             , ((-1, 1),w)
+             , (( 0, 1),1)
+             , (( 1, 1),w)
+             , (( 1, 0),1)
+             , (( 1,-1),w)
+             , (( 0,-1),1)
+             , ((-1,-1),w)
+             , ((-1, 0),1)
+             ] :: [((Double, Double), Double)]
+        w = sqrt 0.5
