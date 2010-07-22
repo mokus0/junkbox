@@ -49,7 +49,8 @@ clip lo hi = max lo . min hi
 
 nurbs
   :: (VectorSpace v, Scalar v ~ s,
-      VectorSpace s, Scalar s ~ s, Fractional s, Ord s) =>
+      VectorSpace s, Scalar s ~ Scalar v,
+      Fractional s, Ord s) =>
      Int -> [s] -> [(v, s)] -> s -> v
 nurbs n us dws = project . bspline n us (map homogenize dws)
     where
