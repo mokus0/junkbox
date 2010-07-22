@@ -71,5 +71,5 @@ circle = nurbs 2 us ds
              , (( 0,-1),1)
              , ((-1,-1),w)
              , ((-1, 0),1)
-             ] :: [((Double, Double), Double)]
+             ]
         w = sqrt 0.5
