@@ -26,8 +26,9 @@ interp x x0 x1 y0 y1
 -- extra control point that would be, notionally, @ds!!(-1)@.  This
 -- control point has no actual influence inside the domain of the spline,
 -- although it /can/ affect values outside the domain (The domain of a
--- B-spline is the central portion of the knot vector where there are 
--- enough basis functions \"active\" to form a complete basis).
+-- B-spline being taken as the central portion of the knot vector where 
+-- there are @p+1@ non-zero basis functions, forming a complete basis
+-- for the degree @p@ polynomials on that interval).
 -- 
 -- This implementation makes the choice that that control point be identical
 -- to the first, so that the position of the first knot is irrelevant.
@@ -35,13 +36,14 @@ interp x x0 x1 y0 y1
 -- point as an argument or as a part of @ds@, in which case slightly 
 -- different logic would be required in the driver function 'bspline'.
 --
--- I find this result difficult to convince myself of, though, even
+-- I initially found this result difficult to convince myself of, even
 -- though the explanation seems plausible.  The reason is that it seems
 -- to indicate that the position of the first knot is utterly irrelevant.
--- Empirically, though, this seems to make sense, as the position of
--- the last knot also seems to be irrelevant (at least, assuming my 
--- implementation is sound)
-deBoor' p us ds x = go us (padTo uHi zeroV ds)
+-- Empirically, though, it seems to hold.  The position of the last knot
+-- also seems to be irrelevant as would be expected, and moving an internal
+-- knot at one end of a basis function does not alter the shape of that
+-- function in the segment furthest opposite.
+deBoor p us ds x = go us (padTo uHi zeroV ds)
     where
         -- Upper endpoints of the intervals are the same for
         -- each row in the table:
@@ -64,13 +66,14 @@ deBoor' p us ds x = go us (padTo uHi zeroV ds)
 
 -- Simpler, clearer, slightly less efficient and less tolerant of
 -- improper inputs:
-deBoor p      _ [] x = []
-deBoor p (_:us) ds x = ds : deBoor (p-1) us ds' x
+deBoor' p      _ [] x = []
+deBoor' p (_:us) ds x = ds : deBoor' (p-1) us ds' x
     where
         ds' = zipWith (interp x) (spans p us) (spans 1 ds)
-
+        
         spans n xs = zip xs (drop n xs)
         
+        -- Uses a slightly modified argument list for interp:
         interp x (x0,x1) (y0,y1)
             |  x <  x0  = y0
             |  x >= x1  = y1
@@ -79,25 +82,11 @@ deBoor p (_:us) ds x = ds : deBoor (p-1) us ds' x
                 a = (x - x0) / (x1 - x0)
 
 
--- Note: returns results on a larger domain than the domain of the spline.
--- This is to avoid problems with minor errors in the input parameter, especially
--- in cases where the first or last knot is not an IEEE-exact number.  It is
--- up to the user to check the domain on which they evaluate the spline.
--- Outside the normal bounds, the basis functions gradually lose polynomial
--- degree (although this behavior is subject to change).  The first and last
--- basis functions go to 1 outside the knot vector.  Thus, outside the knot
--- vector the spline takes the value of the control point at the 
--- corresponding end of the spline.
-bspline p us ds
-    | lastSegment < 0   = error "bspline: not enough control points"
-    | otherwise         = \x -> deBoor p us ds x !! p !! segment x
-    where
-        lastSegment = length us - 2*(p+1)
-        segment x   = clip 0 lastSegment (count (<x) (drop p us) - 1)
+-- Very simple driver, relying on the clamping of 'interp' to 
+-- perform a lazy search for the right segment.
+bspline p us ds = head . last . deBoor p us ds
 
 -- a few very general utility functions
-count p = length . filter p
-clip lo hi = max lo . min hi
 trimTo list  xs = zipWith const xs list
 padTo list z xs = trimTo list (xs ++ repeat z)
 
