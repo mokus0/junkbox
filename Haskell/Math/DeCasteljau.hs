@@ -2,14 +2,12 @@ module Math.DeCasteljau where
 
 import Data.VectorSpace
 
-interp a x y = (1-a) *^ x ^+^ a *^ y
+interp a x y = lerp x y a
 
-deCasteljau t [p] = [[p]]
-deCasteljau t ps = ps : deCasteljau t (zipWith (interp t) ps (tail ps))
+deCasteljau [] t = []
+deCasteljau ps t = ps : deCasteljau (zipWith (interp t) ps (tail ps)) t
 
-bezier t ps = head $ last $ deCasteljau t ps
+bezier ps = head . last . deCasteljau ps
 
--- note; 2nd curve has parameter reversed
-split t ps =
-  let pss = deCasteljau t ps
-  in (map head pss, map last pss)
+split ps t = (map head pss, reverse (map last pss))
+    where pss = deCasteljau ps t
