@@ -187,6 +187,10 @@ And a couple more general utility functions used in deBoor':
 > trimTo list  xs = zipWith const xs list
 > padTo list z xs = trimTo list (xs ++ repeat z)
 
+> deriv p us ds = zipWith (*^) (tail cs) (zipWith (^-^) (tail ds) ds)
+>     where
+>         cs = [fromIntegral p / (u0 - u1) | (u0, u1) <- spans p us]
+
 
 Pastebin
 ========
