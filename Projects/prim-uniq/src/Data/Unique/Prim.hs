@@ -1,5 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
-module TypeExperiments.Uniq (Uniq, getUniq, unsafeMkUniq) where
+module Data.Unique.Prim (Uniq, getUniq, unsafeMkUniq) where
 
 import Control.Monad.Primitive
 import Data.IORef

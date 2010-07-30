@@ -1,60 +1,48 @@
 {-# LANGUAGE GADTs #-}
-module TypeExperiments.GCompare
+module Data.GADT.Tag
     ( GOrdering(..)
     , GCompare(..)
     , geq
     , Tag
     , newTag
-    , unsafeMkTag
+    , veryUnsafeMkTag
     ) where
 
-import TypeExperiments.Uniq
+import Data.GADT.Compare
+import Data.GADT.Show
+import Data.Unique.Prim
 import Unsafe.Coerce
 import Control.Monad.Primitive
 import Control.Monad
 
--- |A type for the result of comparing GADT constructors; the type parameters
--- of the GADT values being compared are included so that in the case where 
--- they are equal their parameter types can be unified.
-data GOrdering a b where
-    GLT :: GOrdering a b
-    GEQ :: GOrdering t t
-    GGT :: GOrdering a b
-
--- |Type class for comparable GADT-like structures.  When 2 things are equal,
--- must return a witness that their parameter types are equal as well (GEQ).
-class GCompare f where
-    gcompare :: f a -> f b -> GOrdering a b
-
--- |Convenient function for simply obtaining a witness of type-equality, if one exists.
--- A handy idiom for using this would be to pattern-bind in the Maybe monad, eg.:
--- 
--- > extract :: Tag s a -> DSum (Tag s) -> Maybe a
--- > extract t1 (DSum t2 x) = do
--- >     GEQ <- geq t1 t2
--- >     return x
--- 
--- (Making use of the DSum type from TypeExperiments.Dependent, which is a 
--- standard dependent sum)
-geq :: (GCompare f, MonadPlus m) => f a -> f b -> m (GOrdering a b)
-geq a b = case gcompare a b of
-    GEQ -> return GEQ
-    _   -> mzero
-
 -- |A super-special ad-hoc GADT-like thing. 'Tag's can be generated in any 
 -- primitive monad (but only tags from the same one can be compared).  Every
 -- tag is equal to itself and to no other.  The GOrdering class allows 
--- rediscovery of a tag's phantom type, useful for example with the "Env"
--- module in this same dir.
+-- rediscovery of a tag's phantom type, so that 'Tag's and values of type
+-- @DSum (Tag s)@ can be tested for equality even when their types are not 
+-- known to be equal.
 --
 -- Essentially, a 'Tag' uses a 'Uniq' as a witness of type equality, which is
 -- sound as long as the 'Uniq' is truly unique and only one 'Tag' is ever 
 -- constructed from any given 'Uniq'.  'newTag' enforces these conditions.
 -- 'unsafeMkTag' provides a way for adventurous users to take responsibility
 -- for them.
-data Tag s a where
-    Tag :: Uniq s -> Tag s a
+-- 
+-- Note that in conjunction with 'runST', 'show' provides a means for breaking
+-- referential transparency; for example:
+-- 
+-- > x = newTag >>= return.show
+-- > y = runST x
+-- > z = (y == y, runST x == runST x)
+-- 
+-- Here, z's value is indeterminate (it depends on the compiler's 
+-- implementation of sharing), and in most compilers will be @(True, False)@,
+-- whereas if things were safe it should be either @(True,True)@ or
+--  @(False, False)@.  Thus, it is recommended the 'Show' instance /only/ be 
+-- used for debugging purposes, if at all.
+newtype Tag s a = Tag (Uniq s) deriving (Eq, Ord)
 instance Show (Tag s a) where showsPrec p (Tag u) = showsPrec p u
+instance GShow (Tag s)  where gshowsPrec _showsValPrec = showsPrec
 instance GCompare (Tag s) where
     gcompare (Tag a) (Tag b) = case compare a b of
         LT -> GLT
@@ -83,5 +71,5 @@ newTag = do
 -- 
 --  * Equivalently, ensuring that the phantom type 'a' is fixed (monomorphic) 
 --    at the time the 'Tag' is created, so that the 'GCompare' instance is sound.
-unsafeMkTag :: Integer -> Tag s a
-unsafeMkTag = Tag . unsafeMkUniq
+veryUnsafeMkTag :: Integer -> Tag s a
+veryUnsafeMkTag = Tag . unsafeMkUniq
