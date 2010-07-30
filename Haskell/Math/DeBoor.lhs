@@ -200,6 +200,9 @@ us = [0,0,0,0.25,0.25,0.5,0.5,0.75,0.75,1,1,1];ds = [ (( 1, 0),1), (( 1,-1),w), 
 
 project (p,w) = recip w *^ p; homogenize (d,w) = (w *^ d, w)
 
+
+let f = circle in sequence_ [printf "%g\t%g\n" x (f x) | x <- map (/1000) [0..1000]]
+
 Basis functions:
 let us = map (/10) [0..10] in sequence_ [printf "%g\t%g\t%g\t%g\t%g\t%g\t%g\n" x (y 0) (y 1) (y 2) (y 3) (y 4) (y 5) | x <- map (/1000) [0..1000], let y n = basis 4 us (n) x]
 
