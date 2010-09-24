@@ -3,9 +3,15 @@ module TypeExperiments.SuspendPrompt where
 
 import Control.Monad.Prompt
 
--- runPromptM :: (Monad m) => (forall a. p a -> m a) -> Prompt p r -> m r
+-- The thought occurs to me that perhaps a further decomposition of the 
+-- iteratee idea could lead to a more elegant implementation.  My first 
+-- thought is that an iteratee is essentially like a defunctional "Prompt"
+-- monad with one prompt operation, "get symbol".
+--
+-- Here is a sketch of a defunctionalized (i.e., non-CPS version of) 'Prompt'.
+-- I wonder: can it be generalized to an operation that is blocking on 
+-- _several_ prompts?
 
--- |Essentially a defunctionalized (i.e., non-CPS version of) 'Prompt'.
 data Suspended p a where
     Done :: a -> Suspended p a
     Suspended :: p t -> (t -> Suspended p a) -> Suspended p a
