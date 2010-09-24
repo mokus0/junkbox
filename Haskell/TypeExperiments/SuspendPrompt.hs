@@ -61,7 +61,7 @@ stepSuspendedM f (Suspended p k) = Left $ do
 
 data GetSym a b where GetSym :: GetSym a (StreamG a)
 
-type Iteratee s a = Suspended (GetSym s) a
+type Iteratee s a = Suspended (GetSym s) (a, StreamG s)
 
 -- non-monadic iteratee type from John Lato's Monad Reader 16 article:
 data StreamG el = Empty | El el | EOF
@@ -74,11 +74,11 @@ streamG empty el eof (El x) = el x
 streamG empty el eof EOF    = eof
 
 -- Isomorphism between @IterV el a@ and @Suspended (GetSym el) a@
-f :: IterV el a -> Iteratee el (a, StreamG el)
+f :: IterV el a -> Iteratee el a
 f (DoneV x rest) = Done (x, rest)
 f (Cont k) = Suspended GetSym (f . k)
 
-g :: Iteratee el (a, StreamG el) -> IterV el a
+g :: Iteratee el a -> IterV el a
 g (Done (x,rest)) = DoneV x rest
 g (Suspended GetSym k) = Cont (g . k)
 
