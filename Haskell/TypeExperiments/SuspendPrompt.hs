@@ -26,6 +26,8 @@ instance Monad (Suspended p) where
     Suspended p k >>= f 
         = Suspended p (\x -> k x >>= f)
 
+-- Suspended is isomorphic to prompt:
+-- (other side of isomorphism is @runSuspendedM prompt@)
 instance MonadPrompt p (Suspended p) where
     prompt p = Suspended p Done
 
@@ -56,3 +58,48 @@ stepSuspendedM f (Suspended p k) = Left $ do
 --     t <- f p
 --     return (Left (k t))
 -- 
+
+data GetSym a b where GetSym :: GetSym a (StreamG a)
+
+type Iteratee s a = Suspended (GetSym s) a
+
+-- non-monadic iteratee type from John Lato's Monad Reader 16 article:
+data StreamG el = Empty | El el | EOF
+data IterV el a 
+    = DoneV a (StreamG el)
+    | Cont (StreamG el -> IterV el a)
+
+-- Isomorphism between @IterV el a@ and @Suspended (GetSym el) a@
+f :: IterV el a -> Iteratee el (a, StreamG el)
+f (DoneV x rest) = Done (x, rest)
+f (Cont k) = Suspended GetSym (f . k)
+
+g :: Iteratee el (a, StreamG el) -> IterV el a
+g (Done (x,rest)) = DoneV x rest
+g (Suspended GetSym k) = Cont (g . k)
+
+-- Proof:
+-- 
+--      f.g = id
+--      --------
+-- 
+-- f . g $ Done (x,rest)
+-- f $ DoneV x rest
+-- Done (x,rest)
+-- 
+-- f . g $ Suspended GetSym k
+-- f $ Cont (g . k)
+-- Suspended GetSym (f . g . k)
+-- {-by induction-} Suspended GetSym k
+-- 
+--      g.f = id
+--      --------
+-- 
+-- g . f $ DoneV x rest
+-- g $ Done (x, rest)
+-- DoneV x rest
+-- 
+-- g . f $ Cont k
+-- g $ Suspended GetSym (f . k)
+-- Cont (g . f . k)
+-- {-by induction-} Cont k
