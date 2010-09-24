@@ -69,6 +69,10 @@ data IterV el a
     = DoneV a (StreamG el)
     | Cont (StreamG el -> IterV el a)
 
+streamG empty el eof Empty  = empty
+streamG empty el eof (El x) = el x
+streamG empty el eof EOF    = eof
+
 -- Isomorphism between @IterV el a@ and @Suspended (GetSym el) a@
 f :: IterV el a -> Iteratee el (a, StreamG el)
 f (DoneV x rest) = Done (x, rest)
@@ -103,3 +107,21 @@ g (Suspended GetSym k) = Cont (g . k)
 -- g $ Suspended GetSym (f . k)
 -- Cont (g . f . k)
 -- {-by induction-} Cont k
+
+data GetSym2 s a where
+    UngetSym  :: s -> GetSym2 s ()
+    GetSym2 :: GetSym2 s (Maybe s)
+
+f' :: IterV el a -> Suspended (GetSym2 el) a
+f' (DoneV x Empty) = Done x
+f' (DoneV x EOF) = Done x
+f' (DoneV x (El y)) = Suspended (UngetSym y) (\() -> Done x)
+f' (Cont k) = Suspended GetSym2 (f' . k . maybe EOF El)
+
+g' :: Suspended (GetSym2 el) a -> IterV el a
+g' (Done x) = DoneV x Empty
+g' (Suspended GetSym2 k) = Cont (g' . k . streamG Nothing Just Nothing)
+g' (Suspended (UngetSym s) k) = case k () of
+        Done x -> DoneV x (El s)
+        Suspended GetSym2 k -> g' (k (Just s))
+        Suspended (UngetSym _) k -> error "UngetSym can only be used for 1 step of lookahead"
