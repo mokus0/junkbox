@@ -32,9 +32,9 @@ $( fmap concat $ mapM deriveLift
     , ''Strict
     ])
 
-instance (Lift a, Integral a) => Lift (Ratio a) where
-    lift x = [| p % q |]
-        where p = numerator x; q = denominator x
+-- instance (Lift a, Integral a) => Lift (Ratio a) where
+--     lift x = [| p % q |]
+--         where p = numerator x; q = denominator x
     
 
 -- All that to say this:
