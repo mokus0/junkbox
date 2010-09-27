@@ -1,20 +1,24 @@
-{-# LANGUAGE RankNTypes, GADTs, MultiParamTypeClasses, FlexibleInstances, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes, GADTs, MultiParamTypeClasses, FlexibleInstances, GeneralizedNewtypeDeriving, ImpredicativeTypes #-}
 module TypeExperiments.Iteratee where
 
-import Prelude hiding (head, drop)
+import Prelude hiding (head, drop, filter)
 import Control.Applicative
 import Control.Monad.Identity
 import Control.Monad.State
 import Control.Monad.Operational
+import Data.Maybe
 
 class Iteratee it where
-    enum :: it el a -> [el] -> it el a
-    run  :: it el a -> Maybe a
+    enum   :: it el a -> [el] -> it el a
+    run    :: it el a -> Maybe a
+    isDone :: it el a -> Bool
+    isDone = isJust . run
 
 class Iteratee it => Examples it where
     head :: it el (Maybe el)
     peek :: it el (Maybe el)
     drop :: Int -> it el ()
+    filter :: (el -> Bool) -> it el a -> it el (it el a)
 
 -- non-monadic iteratee type from John Lato's Monad Reader 16 article:
 data StreamG el = Empty | El el | EOF
@@ -68,6 +72,13 @@ instance Examples IterV where
             step Empty = Cont step
             step EOF = Done () EOF
 
+    filter pred i@(Done _ _) = return i
+    filter pred (Cont k) = Cont step
+        where
+            step e@(El el) | pred el = filter pred (k e)
+            step EOF = Done (k EOF) EOF
+            step _ = Cont step
+
 -- proposed new iteratee type:
 -- (conceptually more modular, and fairly easy to imagine interesting extensions)
 -- Exported: Iter, getSym, unGetSym, enum, run
@@ -80,6 +91,9 @@ instance Examples IterV where
 -- could be shifted entirely out of the monad and into the enumerator primitives
 -- (eg, add a Peek or UnGet constructor to the GetSym type and drop the State
 -- component of the Iter type).
+--
+-- Another interesting generalization would be to introduce a new prompt 
+-- constructor for "yielding" (in the sense of a generator / coroutine) values.
 -- 
 -- TODO: define some useful equivalence (~=) and attempt to prove Iter ~= IterV.  
 -- (I think there is not quite a type isomorphism, because in the Done state there
@@ -107,6 +121,10 @@ instance Applicative (Iter el) where
     pure = return
     (<*>) = ap
 
+-- Get a symbol from the input, refusing to continue until one is given.
+-- Without this primitive (and without directly mucking about in the internal
+-- representation), there's actually no way to create an 'Iter' that doesn't
+-- terminate on EOF.
 requireSym :: Iter el el
 requireSym = Iter $ do
     str <- lift get
@@ -150,11 +168,29 @@ instance Iteratee Iter where
     run (Iter i) = case evalState (viewT i) EOF of
         Return x -> Just x
         _        -> Nothing
-        
 
 instance Examples Iter where
     head = requestSym
     peek = peekSym
     drop 0 = return ()
     drop n = do requestSym; drop (n-1)
+    filter p it 
+        | isDone it  = return it
+        | otherwise  = do
+            mbS <- head
+            case mbS of
+                Nothing -> return it
+                Just s
+                    | p s       -> filter p (enum it [s])
+                    | otherwise -> filter p it
 
+-- interesting sideshow: replace _some_ of the prompts in a ProgramT with
+-- their implementations
+runPartial :: Monad m => (forall t. p t -> Maybe (m t)) -> ProgramT p m a -> ProgramT p m a
+runPartial f prog = do
+    v <- lift (viewT prog)
+    case v of
+        Return x -> return x
+        p :>>= k -> do
+            x <- maybe (singleton p) lift (f p)
+            runPartial f (k x)
