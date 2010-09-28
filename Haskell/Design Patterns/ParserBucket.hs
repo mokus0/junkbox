@@ -79,6 +79,19 @@ import Text.Parsec.Iteratee
 --    greedily  prioritizing parsers by the size of input they accept without 
 --    any regard for overlap between input in proposed parses.
 --
+--  * Parsers should probably also have an "invalidate" state:  When they
+--    are offered certain input, that input may give them insight that
+--    enables them to declare, before continuing any further, that they will
+--    never be able to finish.  For example, a parser might be chugging along
+--    thinking everything's ok, and then an "unrelated" error message comes
+--    across the console indicating that the subsystem responsible for 
+--    generating the messages it's parsing has crashed.  That's an out-of-band
+--    message that the parser can recognize as invalidating all the work it's
+--    done so far.  It should then have the option to consume that message
+--    or leave it for others.  If it acts on it but leaves it, then the
+--    message should still be considered as having been acted upon even if
+--    no other parser explicitly consumes it (ie, it should not subsequently
+--    be reported to the user as having been an unrecognized fragment)
 
 -- Note that this concept would be useful in more general settings.  For example,
 -- I have often pondered how one would go about designing and implementing an
