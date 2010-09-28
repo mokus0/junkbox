@@ -1,0 +1,96 @@
+{-# LANGUAGE GADTs #-}
+module ParserBucket where
+
+import Text.Parsec.Iteratee
+
+-- The challenge:  We are monitoring the output of a program with asynchronous
+-- behaviour.  That is, it has subsystems that produce meaningful multi-line
+-- output, but those subsystems (at least conceptually) run concurrently with
+-- each other and their output can become intermingled.  We want to take 
+-- several simple parsers (one to handle each kind of message we are 
+-- interested in) and run them all concurrently, each one accepting those
+-- lines that make sense to it, and no line being accepted by more than one.
+-- Very importantly, though, we never know which lines go to which parser 
+-- until one or more parsers actually produce a result!  That is, at any given
+-- time there may be more than one parser _able_ to consume a line, but none of
+-- them actually returning any final output.
+
+-- Proposed solution: Start from a set of "seed" parsers (iteratees with the
+-- ability to signal rejection) and an empty set of "live" parsers.
+-- 
+-- For every "chunk" of input (unit of possible interleaving, typically a 
+-- single "line" of terminal text), take every "live" parser and every 
+-- "seed" parser, feed it that line, and if it accepts that line, either:
+-- 
+--  * if it's done, return the final result and remove that parser from the
+--    "live" pool (if it came from there; the "seed" parsers always stay)
+-- 
+--  * otherwise, if it's a "seed", add it to the live pool.  If it was 
+--    already there, replace that instance with its new state.
+-- 
+-- In any case, every parser should have associated a _tag_ of which lines it
+-- has accepted.  When each parser completes, the lines it has accepted 
+-- are consumed.  Only one parser is permitted to consume any given line, so:
+-- 
+--  * if more than one complete at once, resolve that somehow (yielding an
+--    ordered list of completions to process).
+-- 
+--  * Each completion that is accepted _kills_ every other "live" parser with
+--    an overlapping input set.
+-- 
+-- With this pruning mechanism, maybe old states of individual parsers
+-- shouldn't replace each other.  After all, only one will ultimately be 
+-- accepted, and when it finally is, then it will naturally kill all its
+-- "other selves".  This could be a behavior flag attached to individual 
+-- parsers.  The default would probably be to "self-prune", since it really
+-- doesn't make sense for them to skip lines that they could accept.
+-- 
+-- In fact, with this pruning mechanism, the distinction between a "seed"
+-- parser and a "live" one can be made implicit:  a "seed" parser is just a
+-- parser with no accepted input lines.  By the pruning rules, it will never
+-- be dropped unless it prunes itself, so the "self-prune" option could be
+-- extended to 3 or 4 states: either 2 booleans (one-shot, self-prune) or
+-- a 3-state enumeration (self-prune, no-self-prune, self-prune-except-seed).
+-- 
+-- The final result is a big black box:  You throw in parsers and fragments of
+-- text to parse, and out come answers that (hopefully) make sense.
+-- 
+-- Some additional things we want from our black box:
+--
+--  * to be told when nothing accepts a line (including when it was
+--    tentatively accepted but then later pruning eliminated the last partial
+--    parse that was using it).
+-- 
+--  * To be told when each line is accepted, or to be able to query which ones
+--    are still under consideration, or at the very least to be able to query
+--    and/or be advised of the "oldest" unaccepted line.
+-- 
+--  * To be able to retroactively kill lines (and any parsers that consumed 
+--    those lines) not yet accepted (so that, for example, a line can be 
+--    declared unparseable if no parser that accepted it is able to finish
+--    after some suitable delay, or so that the parser pool can be thinned by
+--    dropping "low priority" message lines)
+-- 
+--  * Flexibility to control the order of acceptance or even delay it until 
+--    other (higher priority) parsers have a chance to finish.  Maybe even 
+--    support for "acceptance solvers" that would consider the whole state of 
+--    the system in order to select an "optimal" set of parses, in the sense 
+--    that sets of parses covering more input are chosen, rather than just 
+--    greedily  prioritizing parsers by the size of input they accept without 
+--    any regard for overlap between input in proposed parses.
+--
+
+-- Note that this concept would be useful in more general settings.  For example,
+-- I have often pondered how one would go about designing and implementing an
+-- "event recognition system".  The problem is essentially the same:  We have
+-- a large number of "stimuli" that we want to make sense of.  There is a lot
+-- of "noise", but somewhere inside that noise there are sequences of stimuli
+-- that have higher level meaning.  We'd like to be able to pull them out.
+-- In this case, we'd also probably like to be able to re-inject new higher-
+-- level events into the "sensorium", preferably also with the ability to tag
+-- them as having occurred at some particular past time and having the event 
+-- recognizers that care about them retroactively consume them.  We'd also like
+-- to be able to make the ordering somewhat "fuzzy".  Maybe tag each event with
+-- a time range, and allow events that are "concurrent" (ie, have overlapping
+-- times) to be delivered in either order.  Or, alternatively, we might want 
+-- events that are "concurrent" to be considered mutually exclusive.
