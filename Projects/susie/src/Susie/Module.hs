@@ -1,38 +1,29 @@
-{-# LANGUAGE RecordWildCards #-}
 module Susie.Module
     ( Module(..), newModule
     ) where
 
-import Susie.Module.ModuleID
-import Susie.Service.ServiceID
+import Susie.Env
 
-import Control.Monad.Primitive
 import Data.Dependent.Sum
 import Data.Version
 
-data Module m s = Module
+data Module m s env = Module
     { name                  :: String
     , version               :: Version
-    , initialize            :: ModuleID s -> m ()
-    , terminate             :: ModuleID s -> m ()
-    
-    , services              :: [DSum (ServiceKey s)]
-    
-    , dependencies          :: [ServiceID s]
-    , onServiceDiscovered   :: DSum (ServiceKey s) -> m ()
-    , onServiceRevoked      :: ServiceID s -> m ()
+    , unloadable            :: Bool
+    , initialize            :: m env
+    , cleanup               :: env -> m ()
+    , dependencies          :: [Id s]
+    , staticExports         :: [DSum (Var s)]
     }
 
-newModule :: Monad m => String -> Module m s
-newModule name = Module
-    { name                  = name
+newModule :: Monad m => Module m s env
+newModule = Module
+    { name                  = error "newModule: no name given"
     , version               = Version [] []
-    , initialize            = \self -> return ()
-    , terminate             = \self -> return ()
-    
-    , services              = []
-    
+    , unloadable            = False
+    , initialize            = return (error "newModule: default environment")
+    , cleanup               = \_   -> return ()
     , dependencies          = []
-    , onServiceDiscovered   = \service -> return ()
-    , onServiceRevoked      = \service -> return ()
+    , staticExports         = []
     }
