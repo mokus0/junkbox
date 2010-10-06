@@ -1,25 +1,22 @@
-> {-# LANGUAGE RankNTypes, TypeFamilies, GeneralizedNewtypeDeriving, MultiParamTypeClasses, FlexibleContexts, FlexibleInstances #-}
+> {-# LANGUAGE RankNTypes, TypeFamilies, GeneralizedNewtypeDeriving, MultiParamTypeClasses, FlexibleContexts, FlexibleInstances, UndecidableInstances, GADTs #-}
 > module TypeExperiments.HighLevelEnumerators where
 > 
-> import TypeExperiments.HighLevelIteratees hiding (Enumerator, feed)
+> import TypeExperiments.HighLevelIteratees
 > import Control.Monad.Trans
 > import Control.Monad.Error
+> import Control.Monad.Prompt
 > import qualified System.IO as IO
 > import qualified Data.ByteString.Char8 as BS
 
-Going back to the high-level development of Iteratees, I'd like to revisit and improve upon my definition of enumerators.  Essentially, an Enumerator is a state monad over an arbitrary iteratee.  I would just use StateT but I also want to require my definition of Enumerator to be independent of the iteratee and its return type, which would require impredicative types, and those are deprecated these days.
+Going back to the high-level development of Iteratees, I'd like to add what I find to be an elegant definition of enumerators.  Essentially, an Enumerator is a state monad over an arbitrary iteratee.  I would just use StateT but I also want to require my definition of Enumerator to be independent of the iteratee and its return type, which would require impredicative types, and those are deprecated these days.
 
 I haven't yet written much of any explanation about this code, so take it as a brain-dump.  There is probably a lot of room for improvement and clarification.
 
-Note that "feed enum iter1 >>= (>> iter2)" /= "feed enum (iter1 >> iter2)" - This is unavoibable, and really should be expected:  if "iter2" asks for input, it's just too late in the first case for "enum" to respond.  This implementation has an additional weakness, though: due to the type of 'step', any yield operation based on it will lose any unused input in the first case if iter1 terminates.  More generally, any other nonlocal computational effects in the iteratee type are severely disrupted.  
+Note that "feed enum iter1 >> iter2" /= "feed enum (iter1 >> iter2)" - This is unavoibable, and really should be expected:  if "iter2" asks for input, it's just too late in the first case for "enum" to respond.  Additionally, it is very much an open question whether the remaining input (if any) from iter1 should be available in iter2 or should be silently discarded.  Ultimately, I am of the opinion that the former pattern of calls really just ought to be discouraged.
 
-One thought I had to remedy this is to change step's type to "it m a -> it m (Either (Stream (Symbol it) -> it m a) a)" (with the same context as before).  This would require an additional primitive operation to run the whole iteratee.  This approach, to me, seems preferable to the more-obvious idea of adding a 'Stream sym' output to "step", for two reasons:  First, it really is not the enumerator's responsibility to keep track of the iteratee's state (and doing so can make things really really complicated).  Second, that still doesn't address any other effects that might be ongoing in the iteratee, such as exception handling.
-
-After experimenting a bit with those sorts of changes, I have not yet come up with any particular opinion about what a corner case like "feed enum iter1 >>= (>> iter2)" should do, as I have yet to come across or imagine a situation where I would ever want either proposed behaviour.
-
-> newtype Enum1 sym m a = Enum1 (forall it t. (Iteratee it m, Symbol it ~ sym) => it m t -> m (it m t, a))
+> newtype Enum1 sym m a = Enum1 (forall it t. (Iteratee it m, Symbol it ~ sym) => it m t -> it m (it m t, a))
 > instance Functor m => Functor (Enum1 sym m) where
->     fmap f (Enum1 e) = Enum1 (fmap (fmap f) . e)
+>     fmap f (Enum1 e) = Enum1 (liftM (fmap f) . e)
 > instance Monad m => Monad (Enum1 sym m) where
 >     return x = Enum1 (\it -> return (it, x))
 >     Enum1 x >>= f = Enum1 (\it -> do
@@ -27,10 +24,10 @@ After experimenting a bit with those sorts of changes, I have not yet come up wi
 >         case x_it of
 >             (it', x') -> (\(Enum1 e) -> e) (f x') it')
 > instance MonadTrans (Enum1 sym) where
->     lift x = Enum1 (\it -> x >>= \r -> return (it, r))
+>     lift x = Enum1 (\it -> lift x >>= \r -> return (it, r))
 
 > class Monad m => Enumerator enum m where
->     feed :: (Iteratee it m, Symbol it ~ sym) => enum sym m a -> it m t -> m (it m t, Either (Stream sym) a)
+>     feed :: (Iteratee it m, Symbol it ~ sym) => enum sym m a -> it m t -> it m (it m t, Either (Stream sym) a)
 >     yieldStream :: m (Stream sym) -> enum sym m ()
 
 > instance Monad m => Enumerator Enum1 m where
@@ -40,7 +37,7 @@ After experimenting a bit with those sorts of changes, I have not yet come up wi
 >         case it of
 >             Right x -> return (return x, ())
 >             Left  k -> do
->                 syms <- getSyms
+>                 syms <- lift getSyms
 >                 return (k syms, ()))
 
 > yield :: Enumerator enum m => [sym] -> enum sym m ()
@@ -70,23 +67,25 @@ I probably shouldn't try to shoehorn these into having the same type for 'yieldS
 >         where
 >             h' (EnumError e) = (\(Enum2 y) -> y) (h e)
 >             h' other = throwError other
->
-> catchIterateeFinished :: (Monad m, Error e)
->     => Enum2 e sym m a
->     -> (Stream sym -> Enum2 e sym m a)
->     -> Enum2 e sym m a
-> catchIterateeFinished (Enum2 x) h = Enum2 (catchError x h')
->     where
->         h' (IterateeFinished str) = (\(Enum2 y) -> y) (h str)
->         h' other = throwError other
+
+This 'EnumeratorError' class is poorly named, and also its operations arguably should be in the base 'Enumerator' class.
+
+> class Enumerator enum m => EnumeratorError enum m where
+>     catchIterateeFinished :: enum sym m a -> (Stream sym -> enum sym m a) -> enum sym m a
+>     finally ::
+>           enum sym m a
+>        -> enum sym m b
+>        -> enum sym m a
 > 
-> finally :: (Monad m, Error e)
->    => Enum2 e sym m a
->    -> Enum2 e sym m b
->    -> Enum2 e sym m a
-> Enum2 x `finally` Enum2 y = Enum2 
->     ((x >>= \r -> y >> return r) `catchError` h)
->     where h err = y >> throwError err
+> instance (MonadError e m, Error e) => EnumeratorError (Enum2 e) m where
+>     catchIterateeFinished (Enum2 x) h = Enum2 (catchError x h')
+>         where
+>             h' (IterateeFinished str) = (\(Enum2 y) -> y) (h str)
+>             h' other = throwError other
+> 
+>     Enum2 x `finally` Enum2 y = Enum2 
+>         ((x >>= \r -> y >> return r) `catchError` h)
+>         where h err = y >> throwError err
 > 
 
 Using `finally', we can implement a nice bracket function that opens a resource, runs all the code that needs it, and guarantees that it'll be safely closed (at least, insofar as it is possible to do so).
@@ -99,24 +98,42 @@ Using `finally', we can implement a nice bracket function that opens a resource,
 >         case mbE of
 >             (it, Left s)                            -> return (it, Left s)
 >             (it, Right (Left (IterateeFinished s))) -> return (it, Left s)
->             (it, Right (Left (EnumError e)))        -> throwError e
+>             (it, Right (Left (EnumError e)))        -> lift (throwError e)
 >             (it, Right (Right x))                   -> return (it, Right x)
 >     yieldStream getSyms = Enum2 (ErrorT (Enum1 (\it -> do
 >         it <- step it
 >         case it of
 >             Right x -> return (return x, Left (IterateeFinished (Chunks [])))
 >             Left  k -> do
->                 syms <- getSyms
+>                 syms <- lift getSyms
 >                 return (k syms, Right ()))))
 
-> enumFile :: IO.FilePath -> Enum2 IOError Char IO ()
-> enumFile path = bracket (IO.openFile path IO.ReadMode) (enumHandle 16) IO.hClose
+> enumFile path = bracket
+>     (logIO "open" (IO.openFile path IO.ReadMode >>= \h -> IO.hSetBuffering h (IO.BlockBuffering (Just 256)) >> return h))
+>     (enumHandle 16)
+>     (logIO "close" . IO.hClose)
 >
-> enumHandle :: Int -> IO.Handle -> Enum2 IOError Char IO ()
 > enumHandle bufSiz h = do
 >     isEOF <- lift (IO.hIsEOF h)
 >     if isEOF then return ()
 >         else do
->             buf <- lift (BS.hGet h bufSiz)
+>             buf <- lift (logIO "hGet" (BS.hGet h bufSiz))
 >             yield (BS.unpack buf)
 >             enumHandle bufSiz h
+
+> logIO msg act = putStr msg >> act
+
+Finally:  as you may have guessed by now (based on my choice of primitives or on Oleg's choice of names) an Enumerator really has nothing at all to do with iteratees except that an iteratee consumes one.  An enumerator is just a monadic "generator" (according to the Pythonic meaning of the word).  So let's make one that reflects that notion.  I won't bother making instances, just a function to tranlate this enumerator to any of the others.
+
+> data Yield sym m t where
+>     Yield :: m (Stream sym) -> Yield sym m ()
+> newtype Enum3 sym m a = Enum3 (PromptT (Yield sym m) m a)
+>     deriving (Functor, Monad)
+>
+> runEnum3 :: (Monad m1, Monad m2) => (m1 (Stream sym) -> m2 ()) -> (forall x. m1 x -> m2 x) -> Enum3 sym m1 t -> m2 t
+> runEnum3 y l (Enum3 e) = runPromptT return (bindP y) (\x k -> l x >>= k) e
+>     where
+>         bindP :: (Monad m1, Monad m2) => (m1 (Stream sym) -> m2 ()) -> Yield sym m1 t -> (t -> m2 r) -> m2 r
+>         bindP y (Yield s) k = y s >> k ()
+> 
+> enum3ToEnum e = runEnum3 yieldStream lift e
