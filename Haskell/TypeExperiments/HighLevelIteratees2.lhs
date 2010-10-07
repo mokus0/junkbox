@@ -1,3 +1,5 @@
+First, let's get the boring stuff out of the way.  This is what GHC needs to be happy with the code in this file:
+
 > {-# LANGUAGE GADTs, MultiParamTypeClasses, FlexibleContexts, FlexibleInstances, TypeFamilies, GeneralizedNewtypeDeriving, RankNTypes #-}
 > module TypeExperiments.HighLevelIteratees2 where
 > import Control.Monad.Trans
@@ -5,15 +7,19 @@
 > import Control.Monad.State
 > import Control.Monad.Error
 
-Every iteratee implementation and tutorial I've seen is at least moderately low-level.  I find the usual presentation does quite a bit to obscure the topic.  In particular, I had to read quite a few implementations and introductions before I ever even had a good idea of what an iteratee is and why i'd use one.
+Every iteratee implementation and tutorial I've seen is at least moderately low-level.  I find the usual presentation does quite a bit to obscure the topic.  In particular, I had to read quite a few implementations and introductions before I ever even had a good idea of what an iteratee is and why i'd use one.  Since then, every serious use I've made of iteratees has involved writing at least one quite convoluted function that did something conceptually quite simple.
 
-One of the biggest problems I find is that the various capabilities the iteratee concept is intended to provide are all jumbled up in the implementation, and often don't really disentangle very cleanly at all.  In Oleg Kiselyov's original implementations, he hints at a state-monad semantics, but rightly concludes that something is missing: the ability to suspend the iteratee when it requests more input.  The 'Program' monad (from the 'operational' package) does exactly that with its "instruction" type.  Iteratees can be viewed as 'Program' monads with a very simple instruction 'set' consisting of just one operation:  Get more input.  The rest of the features we have come to expect can also be added by other, more well-known, monad transformers.
+One of the biggest problems I find is that the various capabilities the iteratee concept is intended to provide are all jumbled up in the implementation, and often don't really disentangle very cleanly at all.  What I'd like to see is a formal semantics of some kind, starting from a specification of exactly what an iteratee is supposed to do.  This entails, among other things, a set of operations that form a 'basis' - some identifiable set of functions or primitive iteratees from which all other iteratees can be built.  With such a basis in mind, a user never needs to know or care about the implementation except insofar as it affects the performance of their code.
 
-I'd like to demonstrate this idea in two ways:  First, by starting from a laundry list of features we want iteratees to have and gradually building up a monad transformer stack that implements them.  Second, by looking at an existing iteratee implementation and reverse-engineering it into an equivalent monad transformer stack.
+In Oleg Kiselyov's original implementations, he hints at a state-monad semantics, but rightly concludes that something is missing: the ability to suspend the iteratee when it requests more input.  The 'Program' monad (from the 'operational' package) does exactly that with its "instruction" type.  Iteratees can be viewed as 'Program' monads with a very simple instruction 'set' consisting of just one operation:  Get more input.  I believe this monad transformer provides the only previously-missing piece of the "iteratee semantics puzzle".  The rest of the features we have come to expect can be provided by other, more well-known, monad transformers.
 
-Since I'll be introducing several different iteratee implementations that incrementally add features, I'll start by defining those features in terms of a few type classes that express the primitive operations associated with them.  This is not intended to be the one true specification or implementation, just an example of an approach I recommend for formally specifying the semantics, rather than the usual approach where the implementation is the only specification.
+With this in mind, I'd like to explore the semantics of iteratees from a different perspective than the usual one.  I'll approach it in two complementary ways:  First, a top-down design starting with a laundry list of features we want iteratees to have and gradually building up a monad transformer stack that implements them.  Second, a bottom up analysis looking at an existing iteratee implementation and reverse-engineering it into an equivalent monad transformer stack.
 
-    * First, the bare minimum:  To be an iteratee, in my mind, is to provide blocking input requests handled by enumerators, coroutine-style.  'getInput' is a primitive operation that asks an enumerator for more input.  'step' is the other side of the operation; it is the means by which an enumerator runs the iteratee until it requests more input.  We'll also include access to an underlying monad in the specification here, since we know we're going to want that anyway and it'd be rather a waste to run through this whole presentation twice.  The particular underlying monad is also exposed as a type class parameter so that it can be constrained later.
+=== Top-down Iteratee Design === 
+
+This section will be introducing several different iteratee implementations that incrementally add features, so I'll start by defining those features in terms of a few type classes that express the primitive operations associated with them.  This is not intended to be the one true specification or implementation, just an example of an approach I recommend for formally specifying the semantics, rather than the usual approach where the implementation is the only specification.  Once the semantics for any given iteratee implementation are specified and a corresponding set of high-level primitives derived from that specification, real user-level tutorials can be written.
+
+    * First, the bare minimum:  As I see it, to be an iteratee is to provide blocking input requests handled by enumerators, coroutine-style.  'getInput' is a primitive operation that asks an enumerator for more input.  'step' is the other side of that operation; it is the means by which an enumerator runs the iteratee until it requests more input.  We'll also include access to an underlying monad in the specification here, since we know we're going to want that anyway and it'd be rather a waste to run through this whole presentation twice.  The particular underlying monad is also exposed as a type class parameter so that it can be constrained later.
 
 > data Stream sym = EOF | Chunks [sym] deriving (Eq, Show)
 > isEOF EOF = True
@@ -29,7 +35,7 @@ Since I'll be introducing several different iteratee implementations that increm
 > end :: Iteratee it m => it m a -> it m a
 > end it = step it >>= either ($EOF) return
 
-    * Second, for practical iteratees we'll also want lookahead - in particular, we want to be able to get a prefix of the available input without consuming all of it.  We also want to be able to see what input there is without consuming any of it.  Traditionally, an 'unget' operation is also provided, but I prefer not to include it even though all of the implementations here could support one.  It really doesn't seem like it ought to be possible to put "back" whatever you want.  In a real-world implementation I might expect to see an 'unget' operation in a separate "_.Internal" module or something.
+    * Second, for practical iteratees we'll also want lookahead - in particular, we want to be able to get a prefix of the available input without consuming all of it.  We also want to be able to see what input is available without consuming any of it or causing the enumerator to do any additional work.  Traditionally, an 'unget' operation is also provided, but I prefer not to include it even though all of the implementations here could support one.  It really doesn't seem like it ought to be possible to put "back" whatever you want.  In a real-world implementation I might expect to see an 'unget' operation in a separate "_.Internal" module or something, with its use discouraged and a tacit expectation that speed freaks will probably make use of it anyway.
 
 > class Iteratee it m => Lookahead it m where
 >     getSymbol :: it m (Maybe  (Symbol it))
@@ -145,7 +151,9 @@ There are many other interesting monad transformers that we could put into the s
 
 This construction of Iteratees requires a much broader knowledge base to digest, and a fair amount of syntactic noise with all the lifting and newtype wrapping and unwrapping, but ultimately I find it considerably simpler to understand, because it involves combining a small number of already-well-understood concepts.  And to be honest, I think that anyone that is able to really understand any of the existing expositions of iteratees probably can digest this one as well.  Much more importantly, it makes iteratees vastly simpler to use;  All of this code need be written once, and you never need to tell your user about how it's implemented, because you can easily infer a full set of primitives for the whole construction - it's just the primitives of the various parts, minus any you don't wish to expose to the user.  This benefit comes merely from the existence of this kind of model - your implementation need not be the same.  It can be as bare-metal as you want, as long as it provides the set of primitives induced by whatever layering of monads you choose as the underlying semantics.
 
-The latter point raises an interesting question.  If you already have an implementation of iteratees, can you easily 'retrofit' a monad-transformer-stack semantics from which to derive an appropriate set of primitives?  Here is a somewhat informal procedure I have found useful for this purpose.
+=== Bottom-up Iteratee Analysis === 
+
+That last point raises an interesting question.  If you already have an implementation of iteratees, can you easily ``retrofit'' a monad-transformer-stack semantics from which to derive an appropriate set of primitives?  Here is a somewhat informal procedure I have found useful for this purpose.
 
 Start by looking at your existing implementation and rewriting it in a simple type-structural notation.  I'll use the implementation from Oleg Kiselyov's original IterateeM.hs as a worked example:
 
@@ -172,9 +180,9 @@ WriterT(w,m,a) = m(a * w)
 StateT(s,m,a) = ReaderT(s,m,WriterT(s,m,a)) = m(a * s) ^ s
 ErrorT(e,m,a) = m(e + a)
 ProgramT(instr,m,a) = m (ProgramViewT(instr,m,a))
-ProgramViewT(instr,m,a) = a + Σt.(instr(t) * ProgramT(instr,m,a) ^ t)
+ProgramViewT(instr,m,a) = a + Σ t.(instr(t) * ProgramT(instr,m,a) ^ t)
 
-The ProgramViewT equation probably requires a bit of explanation.  The "Σ" component is a dependent sum.  We interpret the 'instr' type as a function that maps each set of type parameters to the equation for all constructors that can yield that assignment of type parameters.  Under this interpretation, the notation means exactly what one would expect, keeping in mind that 't' ranges over _all_ types.  For example, the following GADT:
+The ProgramViewT equation probably requires a bit of explanation.  The "Σ t." component corresponds to existential quantification over a new type variable "t".  Interpreting the 'instr' type as a function that maps each set of type parameters to the equation for all constructors that can yield that assignment of type parameters, the notation means exactly what one would expect from the summation operation in high-school algebra.  For example, the following GADT:
 
 data Foo a b where
     Bar :: Int -> String -> Foo X Y
@@ -186,9 +194,9 @@ Foo(X,Y) = Int * String
 Foo(Z,Z) = 1
 Foo(_,_) = 0
 
-so "Σ a b.(Foo(a,b) * Bar(a))" would be any constructor of Foo along with a value of type "Bar a" with "a" equal to the first type parameter of Foo in that constructor's type.
+so "Σ a b.(Foo(a,b) * Bar(a))" would expand to "Foo(X,Y) * Bar(X) + Foo(Z,Z) * Bar(Z)", which (by evaluating Foo) simplifies to "Int * String * Bar(X) + Bar(Z)".  Thus we can conclude that there is at least one isomorphism between "forall a b. (Foo a b, Bar a)" and "Either (Int,String,Bar X) (Bar Z)".
 
-With all this in mind, here are two rewrites of the Iteratee equations above.  We first hypothesize, based on a hunch, that Iteratee(el,m,a) is isomorphic to ProgramViewT(f,n,b) for some f, n and b:
+With all this in mind, here are two rewrites of the Iteratee equations above.  We first hypothesize, based on superficial similarities of the corresponding equations, that Iteratee(el,m,a) is isomorphic to ProgramViewT(f,n,b) for some f, n and b:
 
 Iteratee(el,m,a) = ProgramViewT(f,n,b)
 
@@ -230,7 +238,7 @@ n(Iteratee(el,m,a)) = m(Iteratee(el,m,a) * Stream(el))
 n = WriterT(Stream(el),m)
 Iteratee(el,m,a) = ProgramViewT(F(el),WriterT(Stream(el),m), a)
 
-It is important to note that this is only an isomorphism of types, and in particular does _NOT_ say that the bind operation that would be assigned by default is the same one as before.  It is most certainly not; Oleg's implementation had state-passing machinery in the bind operation.  The fact that we have an isomorphism of types, though, means that we can push the implementation's existing instances through to the new type - also a valuable exercise because it lets us know exactly what the implementation was doing, in  a language of our choosing.
+It is important to note that this is only an isomorphism of types, and in particular does _NOT_ say that the Monad operations that would be provided by library implementations of these monad transformers are the same as the original implementation's.  It is most certainly not; Oleg's implementation had state-passing machinery in the bind operation, whereas this one involves concatenating unused chunks and would require the "enumerator" machinery to feed unused chunks back into the iteratees.  The fact that we have an isomorphism of types, though, means that we can push the implementation's existing operations through to the new type - also a valuable exercise because it lets us restate exactly what the implementation was doing in a language of our choosing.
 
 Going back to the choice of 'f', (which we'll start calling 'g' to emphasize that this is a different function to the one from before) another sensible choice would be to let the unit type be the only element of 'g''s range:
 
@@ -260,8 +268,8 @@ Iteratee(el,m,a)
 = a + Σt.(G(t) * StateT(Stream(el),m,ProgramViewT(G,n,a)) ^ t)
 = ProgramViewT(G,StateT(Stream(el),m),a)
 
-Which is a nicer conclusion than the previous one because it formally includes Oleg's informal notion that an Iteratee is a kind of a state monad.  From this definition we can see that it really is.  Keep in mind, again, that the state operations we get for free from the StateT type are not _exactly_ the same as the ones we get when we push the original type's capabilities through our isomorphism.  It's mostly a standard state monad, but due to the original implementation of (>>=), the "G Nothing" operation effectively cannot be handled unless the state is empty (if the state is not empty, it is a no-op).
+This is a nicer conclusion than the previous one because it formalizes Oleg's informal notion that an Iteratee is a kind of a state monad.  From this definition we can see that it really is.  Keep in mind, again, that the operations we get for free from the StateT type are not _exactly_ the same as the ones we get when we push the original type's capabilities through our isomorphism.  It's mostly a standard state monad, but due to the original implementation of (>>=), the "G Nothing" operation is effectively a no-op unless the state is empty.
 
-Incidentally, the fact that this Iteratee implementation is equivalent to ProgramViewT and not to ProgramT exposes a subtle problem with the implementation (although it will have been obvious to some already):  This Iteratee type is _NOT_ a monad transformer.  It violates the law that requires "lift . return = return".  I'm not entirely sure whether it obeys the monad laws either, though I suspect it does.  I have checked the identity laws but not associativity.
+Incidentally, the fact that this Iteratee implementation is equivalent to ProgramViewT and not to ProgramT exposes a subtle problem with the implementation (although it will have been obvious to some already):  This Iteratee type is _NOT_ a monad transformer.  It violates the law that requires "lift . return = return" - "lift (return x)" will ask the enumerator for input before passing on "x" to the rest of the program.  I'm not entirely sure whether it obeys the monad laws either, though I suspect it does.  I have checked the identity laws but not associativity.
 
 It is an eye-opening (and highly recommended) exercise to perform this sort of derivation for several different implementations of iteratees and compare the resulting transformer stacks.  It's particularly interesting to note just how widely varied the semantics are.  Even the two main stand-alone implementations on Hackage (the "iteratee" and "enumerator" packages) are subtly different.  The practical consequences of those differences are not at all easy to see from a glance at their implementations, but when restated as monad transformer stacks the differences are quite obvious.  Doing so also sheds light on some past haskell-cafe discussions, especially one regarding error handling in the "enumerator" package.
