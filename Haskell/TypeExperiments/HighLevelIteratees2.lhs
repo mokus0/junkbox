@@ -1,11 +1,28 @@
+\documentclass[10pt]{article}
+%include polycode.fmt
+
+\begin{document}
+
+\title{@TypeExperiments/HighLevelIteratees@}
+\author{James Cook}
+\date{2010}
+
+\maketitle
+
+%if codeOnly || showAllCode
 First, let's get the boring stuff out of the way.  This is what GHC needs to be happy with the code in this file:
 
-> {-# LANGUAGE GADTs, MultiParamTypeClasses, FlexibleContexts, FlexibleInstances, TypeFamilies, GeneralizedNewtypeDeriving, RankNTypes #-}
-> module TypeExperiments.HighLevelIteratees2 where
-> import Control.Monad.Trans
-> import Control.Monad.Operational
-> import Control.Monad.State
-> import Control.Monad.Error
+\begin{code}
+
+{-# LANGUAGE GADTs, MultiParamTypeClasses, FlexibleContexts, FlexibleInstances, TypeFamilies, GeneralizedNewtypeDeriving, RankNTypes #-}
+module TypeExperiments.HighLevelIteratees2 where
+import Control.Monad.Trans
+import Control.Monad.Operational
+import Control.Monad.State
+import Control.Monad.Error
+        
+\end{code}
+%endif
 
 Every iteratee implementation and tutorial I've seen is at least moderately low-level.  I find the usual presentation does quite a bit to obscure the topic.  In particular, I had to read quite a few implementations and introductions before I ever even had a good idea of what an iteratee is and why i'd use one.  Since then, every serious use I've made of iteratees has involved writing at least one quite convoluted function that did something conceptually quite simple.
 
@@ -21,128 +38,152 @@ This section will be introducing several different iteratee implementations that
 
     * First, the bare minimum:  As I see it, to be an iteratee is to provide blocking input requests handled by enumerators, coroutine-style.  'getInput' is a primitive operation that asks an enumerator for more input.  'step' is the other side of that operation; it is the means by which an enumerator runs the iteratee until it requests more input.  We'll also include access to an underlying monad in the specification here, since we know we're going to want that anyway and it'd be rather a waste to run through this whole presentation twice.
 
-> data Stream sym = EOF | Chunks [sym] deriving (Eq, Show)
-> isEOF EOF = True
-> isEOF _   = False
-> isEmpty EOF         = True
-> isEmpty (Chunks cs) = null cs
-> 
-> class MonadTrans it => Iteratee it where
->     type Symbol it
->     getInput :: Monad m => it m (Stream (Symbol it))
->     step :: Monad m => it m a -> it m (Either (Stream (Symbol it) -> it m a) a)
-> 
-> end :: (Iteratee it, Monad m, Monad (it m)) => it m a -> it m a
-> end it = step it >>= either ($EOF) return
+\begin{code}
+
+data Stream sym = EOF | Chunks [sym] deriving (Eq, Show)
+isEOF EOF = True
+isEOF _   = False
+isEmpty EOF         = True
+isEmpty (Chunks cs) = null cs
+
+class MonadTrans it => Iteratee it where
+    type Symbol it
+    getInput :: Monad m => it m (Stream (Symbol it))
+    step :: Monad m => it m a -> it m (Either (Stream (Symbol it) -> it m a) a)
+
+end :: (Iteratee it, Monad m, Monad (it m)) => it m a -> it m a
+end it = step it >>= either ($EOF) return
+
+\end{code}
 
     * Second, for practical iteratees we'll also want lookahead - in particular, we want to be able to get a prefix of the available input without consuming all of it.  We also want to be able to see what input is available without consuming any of it or causing the enumerator to do any additional work.  Traditionally, an 'unget' operation is also provided, but I prefer not to include it even though all of the implementations here could support one.  It really doesn't seem like it ought to be possible to put "back" whatever you want.  In a real-world implementation I might expect to see an 'unget' operation in a separate "_.Internal" module or something, with its use discouraged and a tacit expectation that speed freaks will probably make use of it anyway.
 
-> class Iteratee it => Lookahead it where
->     getSymbol :: Monad m => it m (Maybe  (Symbol it))
->     lookahead :: Monad m => it m (Stream (Symbol it))
+\begin{code}
+
+class Iteratee it => Lookahead it where
+    getSymbol :: Monad m => it m (Maybe  (Symbol it))
+    lookahead :: Monad m => it m (Stream (Symbol it))
+
+\end{code}
 
     * (Traditional) exception handling:  The MonadError class is actually sufficient for this purpose, but let's make it explicitly about iteratees anyway just for emphasis.
 
-> class Iteratee it => IterateeError it where
->     type Exc it
->     throw  :: Monad m => Exc it -> it m a
->     handle :: Monad m => (Exc it -> it m a) -> it m a -> it m a
+\begin{code}
+
+class Iteratee it => IterateeError it where
+    type Exc it
+    throw  :: Monad m => Exc it -> it m a
+    handle :: Monad m => (Exc it -> it m a) -> it m a -> it m a
+
+\end{code}
 
 Now for some implementations.  Here's a minimalist iteratee, without support for any of the 'fancy' stuff like lookahead, exceptions, etc:
 
-> data Fetch sym a where
->     Fetch :: Fetch sym (Stream sym)
+\begin{code}
 
-> newtype Iter1 sym m a = Iter1 (ProgramT (Fetch sym) m a)
->     deriving (Functor, Monad, MonadTrans)
-> instance Iteratee (Iter1 sym) where
->     type Symbol (Iter1 sym) = sym
->     getInput = Iter1 (singleton Fetch)
->     step (Iter1 p) = lift (viewT p) >>= \v -> case v of
->         Return x      -> return (Right x)
->         Fetch :>>= k  -> return (Left (Iter1 . k))
-> 
-> runIter1 i = do
->     let Iter1 p = end i
->     v <- viewT p
->     case v of
->         Return x  -> return (Just x)
->         _         -> return Nothing
+data Fetch sym a where
+    Fetch :: Fetch sym (Stream sym)
+
+newtype Iter1 sym m a = Iter1 (ProgramT (Fetch sym) m a)
+    deriving (Functor, Monad, MonadTrans)
+instance Iteratee (Iter1 sym) where
+    type Symbol (Iter1 sym) = sym
+    getInput = Iter1 (singleton Fetch)
+    step (Iter1 p) = lift (viewT p) >>= \v -> case v of
+        Return x      -> return (Right x)
+        Fetch :>>= k  -> return (Left (Iter1 . k))
+
+runIter1 i = do
+    let Iter1 p = end i
+    v <- viewT p
+    case v of
+        Return x  -> return (Just x)
+        _         -> return Nothing
+
+\end{code}
 
 We can easily add lookahead by throwing a state monad into the mix (note that Iter2's getInput doesn't call Iter1's getInput unless the 'Stream' state is EOF or Chunks []):
 
-> newtype Iter2 sym m a = Iter2 (Iter1 sym (StateT (Stream sym) m) a)
->    deriving (Functor, Monad)
-> instance MonadTrans (Iter2 sym) where
->     lift = Iter2 . lift . lift
-> 
-> runIter2 (Iter2 i) = runStateT (runIter1 i) (Chunks [])
-> 
-> instance Iteratee (Iter2 sym) where
->     type Symbol (Iter2 sym) = sym
->     getInput = do
->         stashed <- lookahead
->         Iter2 $ if isEmpty stashed
->             then do
->                 inp <- getInput
->                 lift (put (if isEOF inp then EOF else Chunks []))
->                 return inp
->             else do
->                 lift (put (Chunks []))
->                 return stashed
->     step (Iter2 i) = do
->         res <- Iter2 (step i)
->         case res of
->             Right x               -> return (Right x)
->             Left k    -> do
->                 s <- lookahead
->                 if isEmpty s
->                     then return (Left (Iter2 . k))
->                     else do
->                         Iter2 (lift (put (Chunks [])))
->                         step (Iter2 (k s))
-> 
-> instance Lookahead (Iter2 sym) where
->     lookahead = Iter2 (lift get)
->     getSymbol = do
->         stashed <- lookahead
->         case stashed of
->             Chunks (c:cs) -> do
->                 Iter2 (lift (put (Chunks cs)))
->                 return (Just c)
->             Chunks [] -> do
->                 inp <- getInput
->                 Iter2 (lift (put inp))
->                 getSymbol
->             EOF -> return Nothing
+\begin{code}
+
+newtype Iter2 sym m a = Iter2 (Iter1 sym (StateT (Stream sym) m) a)
+   deriving (Functor, Monad)
+instance MonadTrans (Iter2 sym) where
+    lift = Iter2 . lift . lift
+
+runIter2 (Iter2 i) = runStateT (runIter1 i) (Chunks [])
+
+instance Iteratee (Iter2 sym) where
+    type Symbol (Iter2 sym) = sym
+    getInput = do
+        stashed <- lookahead
+        Iter2 $ if isEmpty stashed
+            then do
+                inp <- getInput
+                lift (put (if isEOF inp then EOF else Chunks []))
+                return inp
+            else do
+                lift (put (Chunks []))
+                return stashed
+    step (Iter2 i) = do
+        res <- Iter2 (step i)
+        case res of
+            Right x               -> return (Right x)
+            Left k    -> do
+                s <- lookahead
+                if isEmpty s
+                    then return (Left (Iter2 . k))
+                    else do
+                        Iter2 (lift (put (Chunks [])))
+                        step (Iter2 (k s))
+
+instance Lookahead (Iter2 sym) where
+    lookahead = Iter2 (lift get)
+    getSymbol = do
+        stashed <- lookahead
+        case stashed of
+            Chunks (c:cs) -> do
+                Iter2 (lift (put (Chunks cs)))
+                return (Just c)
+            Chunks [] -> do
+                inp <- getInput
+                Iter2 (lift (put inp))
+                getSymbol
+            EOF -> return Nothing
+
+\end{code}
 
 To that we can add exception handling with ErrorT:
 
-> newtype Iter3 e sym m a = Iter3 (ErrorT e (Iter2 sym m) a)
->     deriving (Functor, Monad, MonadError e)
-> instance Error e => MonadTrans (Iter3 e sym) where
->     lift = Iter3 . lift . lift
-> 
-> runIter3 (Iter3 i) = runIter2 (runErrorT i)
-> 
-> instance Error e => Iteratee (Iter3 e sym) where
->     type Symbol (Iter3 e sym) = sym
->     getInput = Iter3 (lift getInput)
->     step (Iter3 i) = Iter3 $ do
->         res <- lift (step (runErrorT i))
->         case res of
->             Right (Right x) -> return (Right x)
->             Right (Left  e) -> throwError e
->             Left k -> return (Left (Iter3 . ErrorT . k))
-> 
-> instance Error e => Lookahead (Iter3 e sym) where
->     lookahead = Iter3 (lift lookahead)
->     getSymbol = Iter3 (lift getSymbol)
-> 
-> instance Error e => IterateeError (Iter3 e sym) where
->     type Exc (Iter3 e sym) = e
->     throw = throwError
->     handle = flip catchError
+\begin{code}
+
+newtype Iter3 e sym m a = Iter3 (ErrorT e (Iter2 sym m) a)
+    deriving (Functor, Monad, MonadError e)
+instance Error e => MonadTrans (Iter3 e sym) where
+    lift = Iter3 . lift . lift
+
+runIter3 (Iter3 i) = runIter2 (runErrorT i)
+
+instance Error e => Iteratee (Iter3 e sym) where
+    type Symbol (Iter3 e sym) = sym
+    getInput = Iter3 (lift getInput)
+    step (Iter3 i) = Iter3 $ do
+        res <- lift (step (runErrorT i))
+        case res of
+            Right (Right x) -> return (Right x)
+            Right (Left  e) -> throwError e
+            Left k -> return (Left (Iter3 . ErrorT . k))
+
+instance Error e => Lookahead (Iter3 e sym) where
+    lookahead = Iter3 (lift lookahead)
+    getSymbol = Iter3 (lift getSymbol)
+
+instance Error e => IterateeError (Iter3 e sym) where
+    type Exc (Iter3 e sym) = e
+    throw = throwError
+    handle = flip catchError
+
+\end{code}
 
 There are many other interesting monad transformers that we could put into the stack.  There are also other interesting constructors we could add to our ProgramT's "instruction" GADT.  For example, either approach could be used to implement resumable exceptions (either by adding another ProgramT layer or by adding constructors to the 'Fetch' GADT to reperesent exceptions).  This is why they appear to be such a natural fit in Oleg's implementation:  As we'll see later, his exception system is equivalent to the latter.
 
@@ -154,13 +195,18 @@ That last point raises an interesting question.  If you already have an implemen
 
 Start by looking at your existing implementation and rewriting it in a simple type-structural notation.  I'll use the implementation from Oleg Kiselyov's original IterateeM.hs as a worked example:
 
-  > type ErrMsg = SomeException
-  > data Stream el = EOF (Maybe ErrMsg) | Chunk [el]
-  > 
-  > data Iteratee el m a 
-  >     = IE_done a
-  >     | IE_cont (Maybe ErrMsg)
-  >               (Stream el -> m (Iteratee el m a, Stream el))
+\begin{spec}
+
+type ErrMsg = SomeException
+data Stream el = EOF (Maybe ErrMsg) | Chunk [el]
+
+data Iteratee el m a 
+    = IE_done a
+    | IE_cont (Maybe ErrMsg)
+              (Stream el -> m (Iteratee el m a, Stream el))
+
+    
+\end{spec}
 
 Which gives us the basic equations:
 
@@ -265,8 +311,10 @@ Iteratee(el,m,a)
 = a + Σt.(G(t) * StateT(Stream(el),m,ProgramViewT(G,n,a)) ^ t)
 = ProgramViewT(G,StateT(Stream(el),m),a)
 
-This is a nicer conclusion than the previous one because it formalizes Oleg's informal remarks that an Iteratee is a kind of a state monad.  From this definition we can see that it really is.  Keep in mind, again, that the operations we get for free from the StateT library implementation are not _exactly_ the same as the ones we get when we push the original type's capabilities through our isomorphism.  It's mostly a standard state monad, but due to the original implementation of (>>=), the "G Nothing" operation is effectively a no-op unless the state is empty.
+This is a nicer conclusion than the previous one because it formalizes Oleg's informal remarks that an Iteratee is a kind of a state monad.  From this definition we can see that it really is.  Keep in mind, again, that the operations we get for free from the library implementations are not _exactly_ the same as the ones we get when we push the original type's capabilities through our isomorphism.  It's mostly a standard `ProgramT' monad, but due to the original implementation of (>>=), the "G Nothing" operation is effectively a no-op unless the state is empty.
 
-Incidentally, the fact that this Iteratee implementation is equivalent to ProgramViewT and not to ProgramT exposes a subtle problem with the implementation (although it will have been obvious to some already):  This Iteratee type is _NOT_ a monad transformer.  It violates the law that requires "lift . return = return" - "lift (return x)" will ask the enumerator for input before passing on "x" to the rest of the program.  I'm not entirely sure whether it obeys the monad laws either, though I suspect it does.  I have checked the identity laws but not associativity.
+Incidentally, the fact that this Iteratee implementation is equivalent to ProgramViewT and not to ProgramT exposes a subtle problem with the implementation (although it will have been obvious to some already):  This Iteratee type is _NOT_ a monad transformer.  It violates the law that requires "lift . return = return": "lift (return x)" will ask the enumerator for input before passing on "x" to the rest of the program.  I'm not entirely sure whether it obeys the monad laws either, though I suspect it does.  I have checked the identity laws but not associativity.
 
 It is an eye-opening (and highly recommended) exercise to perform this sort of derivation for several different implementations of iteratees and compare the resulting transformer stacks.  It's particularly interesting to note just how widely varied the semantics are.  Even the two main stand-alone implementations on Hackage (the "iteratee" and "enumerator" packages) are subtly different.  The practical consequences of those differences are not at all easy to see from a glance at their implementations, but when restated as monad transformer stacks the differences are quite obvious.  Doing so also sheds light on some past haskell-cafe discussions, especially one regarding error handling in the "enumerator" package.
+
+\end{document}
