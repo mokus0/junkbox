@@ -19,7 +19,7 @@ With this in mind, I'd like to explore the semantics of iteratees from a differe
 
 This section will be introducing several different iteratee implementations that incrementally add features, so I'll start by defining those features in terms of a few type classes that express the primitive operations associated with them.  This is not intended to be the one true specification or implementation, just an example of an approach I recommend for formally specifying the semantics, rather than the usual approach where the implementation is the only specification.  Once the semantics for any given iteratee implementation are specified and a corresponding set of high-level primitives derived from that specification, real user-level tutorials can be written.
 
-    * First, the bare minimum:  As I see it, to be an iteratee is to provide blocking input requests handled by enumerators, coroutine-style.  'getInput' is a primitive operation that asks an enumerator for more input.  'step' is the other side of that operation; it is the means by which an enumerator runs the iteratee until it requests more input.  We'll also include access to an underlying monad in the specification here, since we know we're going to want that anyway and it'd be rather a waste to run through this whole presentation twice.  The particular underlying monad is also exposed as a type class parameter so that it can be constrained later.
+    * First, the bare minimum:  As I see it, to be an iteratee is to provide blocking input requests handled by enumerators, coroutine-style.  'getInput' is a primitive operation that asks an enumerator for more input.  'step' is the other side of that operation; it is the means by which an enumerator runs the iteratee until it requests more input.  We'll also include access to an underlying monad in the specification here, since we know we're going to want that anyway and it'd be rather a waste to run through this whole presentation twice.
 
 > data Stream sym = EOF | Chunks [sym] deriving (Eq, Show)
 > isEOF EOF = True
@@ -27,26 +27,26 @@ This section will be introducing several different iteratee implementations that
 > nullStream (Chunks (_:_)) = False
 > nullStream _              = True
 > 
-> class (Monad m, Monad (it m), MonadTrans it) => Iteratee it m where
+> class MonadTrans it => Iteratee it where
 >     type Symbol it
 >     getInput :: Monad m => it m (Stream (Symbol it))
 >     step :: Monad m => it m a -> it m (Either (Stream (Symbol it) -> it m a) a)
 > 
-> end :: Iteratee it m => it m a -> it m a
+> end :: (Iteratee it, Monad m, Monad (it m)) => it m a -> it m a
 > end it = step it >>= either ($EOF) return
 
     * Second, for practical iteratees we'll also want lookahead - in particular, we want to be able to get a prefix of the available input without consuming all of it.  We also want to be able to see what input is available without consuming any of it or causing the enumerator to do any additional work.  Traditionally, an 'unget' operation is also provided, but I prefer not to include it even though all of the implementations here could support one.  It really doesn't seem like it ought to be possible to put "back" whatever you want.  In a real-world implementation I might expect to see an 'unget' operation in a separate "_.Internal" module or something, with its use discouraged and a tacit expectation that speed freaks will probably make use of it anyway.
 
-> class Iteratee it m => Lookahead it m where
->     getSymbol :: it m (Maybe  (Symbol it))
->     lookahead :: it m (Stream (Symbol it))
+> class Iteratee it => Lookahead it where
+>     getSymbol :: Monad m => it m (Maybe  (Symbol it))
+>     lookahead :: Monad m => it m (Stream (Symbol it))
 
     * (Traditional) exception handling:  The MonadError class is actually sufficient for this purpose, but let's make it explicitly about iteratees anyway just for emphasis.
 
-> class Iteratee it m => IterateeError it m where
+> class Iteratee it => IterateeError it where
 >     type Exc it
->     throw  :: Exc it -> it m a
->     handle :: (Exc it -> it m a) -> it m a -> it m a
+>     throw  :: Monad m => Exc it -> it m a
+>     handle :: Monad m => (Exc it -> it m a) -> it m a -> it m a
 
 Now for some implementations.  Here's a minimalist iteratee, without support for any of the 'fancy' stuff like lookahead, exceptions, etc:
 
@@ -55,7 +55,7 @@ Now for some implementations.  Here's a minimalist iteratee, without support for
 
 > newtype Iter1 sym m a = Iter1 (ProgramT (Fetch sym) m a)
 >     deriving (Functor, Monad, MonadTrans)
-> instance Monad m => Iteratee (Iter1 sym) m where
+> instance Iteratee (Iter1 sym) where
 >     type Symbol (Iter1 sym) = sym
 >     getInput = Iter1 (singleton Fetch)
 >     step (Iter1 p) = lift (viewT p) >>= \v -> case v of
@@ -78,7 +78,7 @@ We can easily add lookahead by throwing a state monad into the mix (note that It
 > 
 > runIter2 (Iter2 i) = runStateT (runIter1 i) (Chunks [])
 > 
-> instance Monad m => Iteratee (Iter2 sym) m where
+> instance Iteratee (Iter2 sym) where
 >     type Symbol (Iter2 sym) = sym
 >     getInput = do
 >         stashed <- lookahead
@@ -102,7 +102,7 @@ We can easily add lookahead by throwing a state monad into the mix (note that It
 >                         Iter2 (lift (put (Chunks [])))
 >                         step (Iter2 (k s))
 > 
-> instance Monad m => Lookahead (Iter2 sym) m where
+> instance Lookahead (Iter2 sym) where
 >     lookahead = Iter2 (lift get)
 >     getSymbol = do
 >         stashed <- lookahead
@@ -125,8 +125,7 @@ To that we can add exception handling with ErrorT.  This is the reason we expose
 > 
 > runIter3 (Iter3 i) = runIter2 (runErrorT i)
 > 
-> instance (Monad m, Error e)
->       => Iteratee (Iter3 e sym) m where
+> instance Error e => Iteratee (Iter3 e sym) where
 >     type Symbol (Iter3 e sym) = sym
 >     getInput = Iter3 (lift getInput)
 >     step (Iter3 i) = Iter3 $ do
@@ -136,13 +135,11 @@ To that we can add exception handling with ErrorT.  This is the reason we expose
 >             Right (Left  e) -> throwError e
 >             Left k -> return (Left (Iter3 . ErrorT . k))
 > 
-> instance (Error e, MonadError e m)
->       => Lookahead (Iter3 e sym) m where
+> instance Error e => Lookahead (Iter3 e sym) where
 >     lookahead = Iter3 (lift lookahead)
 >     getSymbol = Iter3 (lift getSymbol)
 > 
-> instance (Error e, MonadError e m) 
->       => IterateeError (Iter3 e sym) m where
+> instance Error e => IterateeError (Iter3 e sym) where
 >     type Exc (Iter3 e sym) = e
 >     throw = throwError
 >     handle = flip catchError
