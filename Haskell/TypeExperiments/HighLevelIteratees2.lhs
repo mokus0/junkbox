@@ -1,5 +1,5 @@
 > {-# LANGUAGE GADTs, MultiParamTypeClasses, FlexibleContexts, FlexibleInstances, TypeFamilies, GeneralizedNewtypeDeriving, RankNTypes #-}
-> module TypeExperiments.HighLevelIteratees where
+> module TypeExperiments.HighLevelIteratees2 where
 > import Control.Monad.Trans
 > import Control.Monad.Operational
 > import Control.Monad.State

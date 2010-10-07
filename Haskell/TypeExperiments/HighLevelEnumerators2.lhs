@@ -1,7 +1,7 @@
 > {-# LANGUAGE RankNTypes, TypeFamilies, GeneralizedNewtypeDeriving, MultiParamTypeClasses, FlexibleContexts, FlexibleInstances, UndecidableInstances, GADTs #-}
-> module TypeExperiments.HighLevelEnumerators where
+> module TypeExperiments.HighLevelEnumerators2 where
 > 
-> import TypeExperiments.HighLevelIteratees
+> import TypeExperiments.HighLevelIteratees2
 > import Control.Monad.Trans
 > import Control.Monad.Error
 > import Control.Monad.Prompt
@@ -123,7 +123,7 @@ Using `finally', we can implement a nice bracket function that opens a resource,
 
 > logIO msg act = putStr msg >> act
 
-Finally:  as you may have guessed by now (based on my choice of primitives or on Oleg's choice of names) an Enumerator really has nothing at all to do with iteratees except that an iteratee consumes one.  An enumerator is just a monadic "generator" (according to the Pythonic meaning of the word).  So let's make one that reflects that notion.  I won't bother making instances, just a function to tranlate this enumerator to any of the others.
+Finally:  as you may have guessed by now (based on my choice of primitives or on Oleg's choice of names) an Enumerator really has nothing at all to do with iteratees except that an iteratee consumes one and through a peculiar inversion of control, the enumerator is given primary control of execution, pretty much for the sole purpose of allowing it to detect when the iteratee stops reading from it.  Aside from that twist, an enumerator is just like a Pythonic "generator" or a Ruby method with a "block" parameter.  So let's make an enumerator type that reflects that notion.  I won't bother making instances, just a function to tranlate this enumerator to any of the others.
 
 > data Yield sym m t where
 >     Yield :: m (Stream sym) -> Yield sym m ()
@@ -137,3 +137,9 @@ Finally:  as you may have guessed by now (based on my choice of primitives or on
 >         bindP y (Yield s) k = y s >> k ()
 > 
 > enum3ToEnum e = runEnum3 yieldStream lift e
+
+
+> feedAndRun enum iter = do
+>     (iter, enumRes) <- feed enum iter
+>     iterRes <- iter
+>     return (enumRes, iterRes)
