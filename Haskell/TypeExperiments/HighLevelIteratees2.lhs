@@ -24,8 +24,8 @@ This section will be introducing several different iteratee implementations that
 > data Stream sym = EOF | Chunks [sym] deriving (Eq, Show)
 > isEOF EOF = True
 > isEOF _   = False
-> nullStream (Chunks (_:_)) = False
-> nullStream _              = True
+> isEmpty EOF         = True
+> isEmpty (Chunks cs) = null cs
 > 
 > class MonadTrans it => Iteratee it where
 >     type Symbol it
@@ -82,7 +82,7 @@ We can easily add lookahead by throwing a state monad into the mix (note that It
 >     type Symbol (Iter2 sym) = sym
 >     getInput = do
 >         stashed <- lookahead
->         Iter2 $ if nullStream stashed
+>         Iter2 $ if isEmpty stashed
 >             then do
 >                 inp <- getInput
 >                 lift (put (if isEOF inp then EOF else Chunks []))
@@ -96,7 +96,7 @@ We can easily add lookahead by throwing a state monad into the mix (note that It
 >             Right x               -> return (Right x)
 >             Left k    -> do
 >                 s <- lookahead
->                 if nullStream s
+>                 if isEmpty s
 >                     then return (Left (Iter2 . k))
 >                     else do
 >                         Iter2 (lift (put (Chunks [])))
@@ -116,7 +116,7 @@ We can easily add lookahead by throwing a state monad into the mix (note that It
 >                 getSymbol
 >             EOF -> return Nothing
 
-To that we can add exception handling with ErrorT.  This is the reason we exposed the 'm' parameter in the Iteratee class - we need something sane to do with unhandled exceptions in the iteratee, so we require that they be throwable in the underlying monad too.  This requirement could easily be dropped by changing the type of 'step', I just chose this approach to keep things simple for these examples.
+To that we can add exception handling with ErrorT:
 
 > newtype Iter3 e sym m a = Iter3 (ErrorT e (Iter2 sym m) a)
 >     deriving (Functor, Monad, MonadError e)
@@ -144,7 +144,7 @@ To that we can add exception handling with ErrorT.  This is the reason we expose
 >     throw = throwError
 >     handle = flip catchError
 
-There are many other interesting monad transformers that we could put into the stack.  There are also other interesting constructors we could add to our underlying "instruction" GADT.  For example, either technique could be used to implement resumable exceptions (either by adding another ProgramT layer or by adding constructors to the 'Fetch' GADT to reperesent exceptions). 
+There are many other interesting monad transformers that we could put into the stack.  There are also other interesting constructors we could add to our ProgramT's "instruction" GADT.  For example, either approach could be used to implement resumable exceptions (either by adding another ProgramT layer or by adding constructors to the 'Fetch' GADT to reperesent exceptions).  This is why they appear to be such a natural fit in Oleg's implementation:  As we'll see later, his exception system is equivalent to the latter.
 
 This construction of Iteratees requires a much broader knowledge base to digest, and a fair amount of syntactic noise with all the lifting and newtype wrapping and unwrapping, but ultimately I find it considerably simpler to understand, because it involves combining a small number of already-well-understood concepts.  And to be honest, I think that anyone that is able to really understand any of the existing expositions of iteratees probably can digest this one as well.  Much more importantly, it makes iteratees vastly simpler to use;  All of this code need be written once, and you never need to tell your user about how it's implemented, because you can easily infer a full set of primitives for the whole construction - it's just the primitives of the various parts, minus any you don't wish to expose to the user.  This benefit comes merely from the existence of this kind of model - your implementation need not be the same.  It can be as bare-metal as you want, as long as it provides the set of primitives induced by whatever layering of monads you choose as the underlying semantics.
 
@@ -246,7 +246,7 @@ or, as a GADT:
 
 data G where G :: Maybe ErrMsg -> G ()
 
-In other words, G is an operation with _only_ side effects.  This reinforces Oleg's informal notion of the iteratee's continuation state as a 'resumable exception'.  It requests outside intervention to make things better - more input, handle some exception, etc.  Our equations are now:
+In other words, G is an operation with _only_ side effects.  This reinforces Oleg's identification of the iteratee's continuation as a 'resumable exception'.  It requests outside intervention to make things better - more input, handle some exception, etc.  Our equations are now:
 
 (1 + ErrMsg) * (m(Iteratee(el,m,a) * Stream(el)) ^ Stream(el))
 = Σt.(G(t) * n(ProgramViewT(G,n,a)) ^ t)
@@ -265,7 +265,7 @@ Iteratee(el,m,a)
 = a + Σt.(G(t) * StateT(Stream(el),m,ProgramViewT(G,n,a)) ^ t)
 = ProgramViewT(G,StateT(Stream(el),m),a)
 
-This is a nicer conclusion than the previous one because it formalizes Oleg's informal notion that an Iteratee is a kind of a state monad.  From this definition we can see that it really is.  Keep in mind, again, that the operations we get for free from the StateT type are not _exactly_ the same as the ones we get when we push the original type's capabilities through our isomorphism.  It's mostly a standard state monad, but due to the original implementation of (>>=), the "G Nothing" operation is effectively a no-op unless the state is empty.
+This is a nicer conclusion than the previous one because it formalizes Oleg's informal remarks that an Iteratee is a kind of a state monad.  From this definition we can see that it really is.  Keep in mind, again, that the operations we get for free from the StateT library implementation are not _exactly_ the same as the ones we get when we push the original type's capabilities through our isomorphism.  It's mostly a standard state monad, but due to the original implementation of (>>=), the "G Nothing" operation is effectively a no-op unless the state is empty.
 
 Incidentally, the fact that this Iteratee implementation is equivalent to ProgramViewT and not to ProgramT exposes a subtle problem with the implementation (although it will have been obvious to some already):  This Iteratee type is _NOT_ a monad transformer.  It violates the law that requires "lift . return = return" - "lift (return x)" will ask the enumerator for input before passing on "x" to the rest of the program.  I'm not entirely sure whether it obeys the monad laws either, though I suspect it does.  I have checked the identity laws but not associativity.
 
