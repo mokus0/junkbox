@@ -30,9 +30,9 @@ import Control.Monad.Trans
 
 Iteratees are an interesting and useful new discovery, but existing explanations of what they are and how to use them leave a lot to be desired.  In particular, the semantics are vague and existing tutorials and implementations encourage a coding style that is far too low-level for the average programmer.
 
-This document presents a new ``high-level'' construction of the iteratee concept as a stack of monad transformers, from which a clear and simple semantics arise naturally, as well as an informal procedure for deriving such a construction from an existing ``low-level'' implementation.  In both cases, the resulting type not only provides an operational semantics, it also provides direction in a search for a set of primitive iteratees and operations.
+This document presents a new high-level construction of the iteratee concept as a stack of monad transformers, from which a clear and simple semantics arise naturally, as well as an informal procedure for deriving such a construction from an existing low-level implementation.  In both cases the resulting type not only provides an operational semantics, it also provides direction in a search for a set of primitive iteratees and operations.
 
-Once the semantics for any given iteratee implementation are specified and a corresponding set of high-level primitives derived from that specification, real coder-friendly tutorials can be written.
+Once the semantics for any given iteratee implementation are specified and a corresponding set of high-level primitives is derived from that specification, real coder-friendly tutorials can be written.
 
 \end{abstract}
 
@@ -45,11 +45,11 @@ I've yet to find even a single tutorial in which every example iteratee, or even
 
 I contend that the vast majority of this complexity is incidental to the iteratee concept and can be eliminated by further abstraction.  Toward that end, I'd like to present yet another iteratee implementation, based on a radically different approach to the problem:  defining iteratees as a stack of already well-understood monad transformers.  By doing so, I hope to develop a clear operational semantics for at least one interpretation of the iteratee concept.
 
-The primary reason I believe such a construction is not already commonplace is the challenge of finding a monad transformer that effectively models interruptible computations, without opening the |ContT| Pandora's Box.  The rest of the things we expect of iteratees are easy to provide with well-known monad transformers.  The |Program| monad and its associated transformer |ProgramT| (from the ``operational'' package) does exactly that.  Iteratees can be viewed as |Program| monads with a very simple instruction set consisting of just one operation:  Get more input.  I believe this is the only previously-missing piece of the ``iteratee semantics'' puzzle.
+The primary reason I believe such a construction is not already commonplace is the challenge of finding a monad transformer that effectively models interruptible computations without opening the |ContT| Pandora's Box.  The rest of the things we expect of iteratees are easy to provide with well-known monad transformers.  The |Program| monad and its associated transformer |ProgramT| (from the ``operational'' package) do exactly that.  Iteratees can be viewed as |Program| monads with a very simple instruction set consisting of just one operation:  Get more input.  I believe this is the only previously-missing piece of the ``iteratee semantics'' puzzle.
 
 This document is divided into two complementary sections:  First, a top-down design starting with a laundry list of features that iteratees should have and gradually building up a monad transformer stack that implements them.  Second, a bottom up analysis looking at an existing iteratee implementation and reverse-engineering it into an equivalent monad transformer stack.
 
-This is not intended to be the one true specification or implementation, or even a serious implementation.  Rather, consider this an example of an approach for formally specifying the semantics, an alternative to the usual approach where the implementation is the only specification.
+This is not intended to be the one true specification or even a serious implementation.  Rather, consider this an example of an approach for formally specifying the semantics, an alternative to the usual approach where the implementation is the only specification.
 
 % section the_iteratee_semantics_puzzle (end)
 
@@ -87,7 +87,7 @@ end it = step it >>= either ($EOF) return
 \subsection{A practical consideration: look-ahead} % (fold)
 \label{sub:a_practical_consideration_look_ahead}
 
-Second, for practical iteratees we'll also want lookahead, of a limited sort.  We want to be able to get a prefix of the available input without consuming all of it.  We also want to be able to see what input is available without consuming any of it or causing the enumerator to do any additional work.  Traditionally, an |unget| operation is also provided, but I prefer not to include it even though all of the implementations here could support one.  It really doesn't seem like it ought to be possible to ``put back'' whatever you want.  In a real-world implementation I might expect to see an |unget| operation in a separate @.Internal@ module or something, with its use discouraged and a tacit expectation that speed freaks will probably make use of it anyway.
+Second, for practical iteratees we'll also want lookahead of a limited sort.  We want to be able to get a prefix of the available input without consuming all of it.  We also want to be able to see what input is available without consuming any of it or causing the enumerator to do any additional work.  Traditionally, an |unget| operation is also provided, but I prefer not to include it even though all of the implementations here could support one.  It really doesn't seem like it ought to be possible to ``put back'' arbitrary data that may or may not ever have been read from the stream in the first place.  In a real-world implementation I might expect to see an |unget| operation in a separate @.Internal@ module or something, with its use discouraged and a tacit expectation that speed freaks will probably make use of it anyway.
 
 \begin{code}
 
@@ -102,7 +102,7 @@ class Iteratee it => Lookahead it where
 \subsection{Exception handling} % (fold)
 \label{sub:exception_handling}
 
-(Traditional) exception handling:  The |MonadError| class is actually sufficient for this purpose, but let's make it explicitly about iteratees anyway just for emphasis.
+(Traditional) exception handling:  The |MonadError| class is actually sufficient for this purpose, but let's a new class that is explicitly about iteratees anyway just for emphasis.
 
 \begin{code}
 
@@ -199,7 +199,9 @@ instance Lookahead (Iter2 sym) where
 
 \end{code}
 
-To that we can add exception handling with |ErrorT|:
+To that we can add exception handling with |ErrorT|.  At this point it really isn't necessary to introduce a new type, since |Iteratee it => ErrorT e (it m) | is already capable of doing everything we want.  However, it doesn't have the right kind to be a monad transformer...  
+
+TODO: refactor |Iteratee| class to be a |Monad| subclass rather than a |MonadTrans| one, then rewrite this section using |instance Iteratee it => Iteratee (ErrorT e it)| or similar.
 
 \begin{code}
 
@@ -241,9 +243,9 @@ Much more importantly, having a monad transformer stack as a reference implement
 \section{Bottom-up Iteratee Analysis} % (fold)
 \label{sec:bottom_up_iteratee_analysis}
 
-That last point raises an interesting question.  If you already have an implementation of iteratees, can you easily ``retrofit'' a monad-transformer-stack semantics from which to derive an appropriate set of primitives?  Here is a somewhat informal procedure I have found useful for this purpose.
+That last point raises an interesting question.  If we already have an implementation of iteratees, can we easily ``retrofit'' a monad-transformer-stack semantics from which to derive an appropriate set of primitives?  Here is a somewhat informal procedure I have found useful for this purpose.
 
-Start by looking at your existing implementation and rewriting it in a simple type-structural notation.  I'll use the implementation from Oleg Kiselyov's original IterateeM.hs as a worked example:
+We'll start by looking at an existing implementation and rewriting it in a simple type-structural notation.  Let's use the implementation from Oleg Kiselyov's original IterateeM.hs as a worked example:
 
 \begin{spec}
 
