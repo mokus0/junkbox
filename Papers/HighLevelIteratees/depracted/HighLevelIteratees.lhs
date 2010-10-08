@@ -275,3 +275,49 @@ Which is a nicer conclusion than the previous one because it formally includes O
 Incidentally, the fact that this Iteratee implementation is equivalent to ProgramViewT and not to ProgramT exposes a subtle problem with the implementation (although it will have been obvious to some already):  This Iteratee type is _NOT_ a monad transformer.  It violates the law that requires "lift . return = return".  I'm not entirely sure whether it obeys the monad laws either, though I suspect it does.  I have checked the identity laws but not associativity.
 
 It is an eye-opening (and highly recommended) exercise to perform this sort of derivation for several different implementations of iteratees and compare the resulting transformer stacks.  It's particularly interesting to note just how widely varied the semantics are.  Even the two main stand-alone implementations on Hackage (the "iteratee" and "enumerator" packages) are subtly different.  The practical consequences of those differences are not at all easy to see from a glance at their implementations, but when restated as monad transformer stacks the differences are quite obvious.  Doing so also sheds light on some past haskell-cafe discussions, especially one regarding error handling in the "enumerator" package.
+
+
+
+--------
+more misc dead code from the newer version:
+
+\begin{spec}
+
+end it = step it >>= either ($EOF) return
+
+step (Iter1 p) = do
+    v <- lift (viewT p)
+    case v of
+        Return x      -> return (Right x)
+        Fetch :>>= k  -> return (Left (Iter1 . k))
+
+runIter1 i = do
+    let Iter1 p = end i
+    v <- viewT p
+    case v of
+        Return x  -> return (Just x)
+        _         -> return Nothing
+
+step (Iter2 i) = do
+    res <- Iter2 (step i)
+    case res of
+        Right  x  -> return (Right x)
+        Left   k  -> do
+            s <- lookahead
+            if isEmpty s
+                then return (Left (Iter2 . k))
+                else do
+                    Iter2 (lift (put (Chunks [])))
+                    step (Iter2 (k s))
+
+
+step (Iter3 i) = Iter3 $ do
+    res <- lift (step (runErrorT i))
+    case res of
+        Right (Right x)  -> return (Right x)
+        Right (Left  e)  -> throwError e
+        Left k           -> return (Left (Iter3 . ErrorT . k))
+
+
+
+\end{spec}
