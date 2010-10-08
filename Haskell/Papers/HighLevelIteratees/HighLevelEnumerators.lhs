@@ -1,7 +1,7 @@
 > {-# LANGUAGE RankNTypes, TypeFamilies, GeneralizedNewtypeDeriving, MultiParamTypeClasses, FlexibleContexts, FlexibleInstances, UndecidableInstances, GADTs #-}
-> module TypeExperiments.HighLevelEnumerators2 where
+> module HighLevelEnumerators where
 > 
-> import TypeExperiments.HighLevelIteratees2
+> import HighLevelIteratees
 > import Control.Monad.Trans
 > import Control.Monad.Error
 > import Control.Monad.Prompt
@@ -14,7 +14,7 @@ I haven't yet written much of any explanation about this code, so take it as a b
 
 Note that "feed enum iter1 >> iter2" /= "feed enum (iter1 >> iter2)" - This is unavoibable, and really should be expected:  if "iter2" asks for input, it's just too late in the first case for "enum" to respond.  Additionally, it is very much an open question whether the remaining input (if any) from iter1 should be available in iter2 or should be silently discarded.  Ultimately, I am of the opinion that the former pattern of calls really just ought to be discouraged.
 
-> newtype Enum1 sym m a = Enum1 (forall it t. (Iteratee it m, Symbol it ~ sym) => it m t -> it m (it m t, a))
+> newtype Enum1 sym m a = Enum1 (forall it t. (Iteratee it, Monad m, Monad (it m), Symbol it ~ sym) => it m t -> it m (it m t, a))
 > instance Functor m => Functor (Enum1 sym m) where
 >     fmap f (Enum1 e) = Enum1 (liftM (fmap f) . e)
 > instance Monad m => Monad (Enum1 sym m) where
@@ -27,7 +27,7 @@ Note that "feed enum iter1 >> iter2" /= "feed enum (iter1 >> iter2)" - This is u
 >     lift x = Enum1 (\it -> lift x >>= \r -> return (it, r))
 
 > class Monad m => Enumerator enum m where
->     feed :: (Iteratee it m, Symbol it ~ sym) => enum sym m a -> it m t -> it m (it m t, Either (Stream sym) a)
+>     feed :: (Iteratee it, Symbol it ~ sym, Monad m, Monad (it m)) => enum sym m a -> it m t -> it m (it m t, Either (Stream sym) a)
 >     yieldStream :: m (Stream sym) -> enum sym m ()
 
 > instance Monad m => Enumerator Enum1 m where

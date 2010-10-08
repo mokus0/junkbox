@@ -1,0 +1,33 @@
+% extracted on 8 Oct 2010 from some example code at: 
+% http://groups.google.com/group/comp.text.tex/msg/3aa4f67d8b3a979b?hl=en-EN&&pli=1
+
+\makeatletter 
+\def\s@btitle{\relax} 
+\def\subtitle#1{\gdef\s@btitle{#1}} 
+\def\@maketitle{% 
+  \newpage 
+  \null 
+  \vskip 2em% 
+  \begin{center}% 
+  \let \footnote \thanks 
+    {\LARGE \@title \par}% 
+                \if\s@btitle\relax 
+                \else\typeout{[subtitle]}% 
+                        \vskip .5pc 
+                        \begin{large}% 
+                                \textsl{\s@btitle}% 
+                                \par 
+                        \end{large}% 
+                \fi 
+    \vskip 1.5em% 
+    {\large 
+      \lineskip .5em% 
+      \begin{tabular}[t]{c}% 
+        \@author 
+      \end{tabular}\par}% 
+    \vskip 1em% 
+    {\large \@date}% 
+  \end{center}% 
+  \par 
+  \vskip 1.5em} 
+\makeatother 

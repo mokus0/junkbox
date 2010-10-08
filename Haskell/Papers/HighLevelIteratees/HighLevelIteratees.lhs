@@ -1,9 +1,11 @@
 \documentclass[10pt,draft]{amsart}
+\usepackage{subtitle}
 %include polycode.fmt
 
 \begin{document}
 
 \title{High Level Iteratees}
+\subtitle{or: An Iteratee Tutorial Tutorial}
 \author{James Cook}
 \date{7 Oct. 2010}
 
@@ -15,7 +17,7 @@ First, let's get the boring stuff out of the way.  This is what GHC needs to be 
 \begin{code}
 
 {-# LANGUAGE GADTs, TypeFamilies, GeneralizedNewtypeDeriving #-}
-module TypeExperiments.HighLevelIteratees2 where
+module HighLevelIteratees where
 import Control.Monad.Error
 import Control.Monad.Operational
 import Control.Monad.State
