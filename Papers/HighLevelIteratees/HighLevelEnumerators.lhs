@@ -16,17 +16,28 @@ import qualified Data.ByteString.Char8 as BS
 \end{code}
 %endif
 
-Going back to the code in the top-down development of Iteratees, I'd like to add what I find to be an elegant definition of enumerators.  Essentially, an enumerator is a state monad over an arbitrary iteratee.  I would just use |StateT| but I also want to require my definition of |Enumerator| to be independent of the iteratee and its return type.  To do so with |StateT| would require impredicative types, which are deprecated these days.
+Going back to the code in section \ref{sec:top_down}, I'd like to add what I find to be an elegant definition of enumerators.  Essentially, an enumerator is a state monad over an arbitrary iteratee.  I would just use |StateT| but I also want to require my definition of |Enumerator| to be independent of the iteratee and its return type.  To do so with |StateT| would require impredicative types, which are deprecated these days.
 
 I haven't yet written much of any explanation about this code, so take it as a brain-dump.  There is probably a lot of room for improvement and clarification.
 
 Note that |feed enum iter1 >> iter2| |/=| |feed enum (iter1 >> iter2)| - This is unavoidable, and really should be expected:  if |iter2| asks for input, it's just too late in the first case for |enum| to respond, while in the second |enum| has no way to distinguish which input requests come from which iteratee.  Additionally, it is very much an open question whether in the former case the remaining input (if any) from |iter1| should be available in |iter2| or should be silently discarded.  Ultimately, I am of the opinion that the former pattern of calls really just ought to be discouraged.
 
+\begin{code}
+class Monad it => Iterable it sym where
+    step :: it a -> it (Either (Stream sym -> it a) a)
+\end{code}
 %{
 %format . = "."
 \begin{code}
-newtype Enum1 sym m a = Enum1 (forall it t. (Iteratee it, Symbol it ~ sym) => it t -> it (it t, a))
+newtype Enum1 sym m a = Enum1 (forall it t. Iterable it sym => it t -> it (it t, a))
 \end{code}
+
+Imagine |Enum1| as:
+
+\begin{spec}
+newtype Enum1 sym m a = Enum1 (StateT (forall it t. Iterable it sym => it t) m a)
+\end{spec}
+
 %}
 \begin{code}
 instance Functor m => Functor (Enum1 sym m) where
@@ -41,7 +52,7 @@ instance MonadTrans (Enum1 sym) where
     lift x = Enum1 (\it -> lift x >>= \r -> return (it, r))
 
 class Enumerator enum where
-    feed :: (Iteratee it, Symbol (it m) ~ sym) => enum sym m a -> it m t -> it m (it m t, Either (Stream sym) a)
+    feed :: Iterable it sym => enum sym m a -> it t -> it (it t, a)
     yieldStream :: m (Stream sym) -> enum sym m ()
 
 instance Monad m => Enumerator Enum1 m where
@@ -88,7 +99,7 @@ instance (Monad m, Error e) => MonadError e (Enum2 e sym m) where
 This |EnumeratorError| class is poorly named, and also its operations arguably should be in the base |Enumerator| class.
 
 \begin{code}
-class Enumerator enum m => EnumeratorError enum m where
+class Enumerator enum => EnumeratorError enum where
     catchIterateeFinished :: enum sym m a -> (Stream sym -> enum sym m a) -> enum sym m a
     finally ::
           enum sym m a

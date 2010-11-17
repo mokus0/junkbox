@@ -2,6 +2,7 @@ module Main where
 
 import Control.Monad
 import Criterion.Main
+import Data.Bits
 import Data.Random
 import Data.Random.Source.DevRandom
 
@@ -23,13 +24,16 @@ isP2'' x = go powers (x - 1)
             EQ -> True
             GT -> go ps (x - p)
 
+isP2''' x = x .&. (x-1) == 0
+
 main = do
     gibberish <- sampleFrom DevRandom (replicateM 10000 (uniform 0 maxBound)) :: IO [Int]
     run (nf id gibberish) 1
     defaultMain
-        [ bench "isP2"   (nf (map isP2)   gibberish)
-        , bench "isP2' " (nf (map isP2')  gibberish)
-        , bench "isP2''" (nf (map isP2'') gibberish)
+        [ bench "isP2"    (nf (map isP2)    gibberish)
+        , bench "isP2' "  (nf (map isP2')   gibberish)
+        , bench "isP2''"  (nf (map isP2'')  gibberish)
+        , bench "isP2'''" (nf (map isP2''') gibberish)
         ]
 
 -- Not directly comparable, but interesting anyway:
