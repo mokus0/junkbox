@@ -2,10 +2,14 @@
         MultiParamTypeClasses,
         FunctionalDependencies,
         FlexibleInstances,
+        FlexibleContexts,
         UndecidableInstances,
-        TypeSynonymInstances
+        TypeSynonymInstances,
+        TypeFamilies
   #-}
 module Math.CayleyDickson where
+
+import Data.VectorSpace
 
 -- A strict tuple type with a suggestive name:
 data CD a = CD !a !a
@@ -51,6 +55,45 @@ instance Conj a => Num (CD a) where
 instance Conj a => Conj (CD a) where
     conj (CD a b) = CD (conj a) (negate b)
 
+instance VectorSpace Int where
+    type Scalar Int = Int
+    (*^) = (*)
+
+instance InnerSpace Int where
+    (<.>) = (*)
+
+instance VectorSpace Integer where
+    type Scalar Integer = Integer
+    (*^) = (*)
+
+instance InnerSpace Integer where
+    (<.>) = (*)
+
+instance AdditiveGroup Rational where
+    zeroV = 0
+    negateV = negate
+    (^+^) = (+)
+
+instance VectorSpace Rational where
+    type Scalar Rational = Rational
+    (*^) = (*)
+
+instance InnerSpace Rational where
+    (<.>) = (*)
+
+instance Conj a => AdditiveGroup (CD a) where
+    zeroV = 0
+    negateV = negate
+    (^+^) = (+)
+
+instance (Conj a, VectorSpace a, AdditiveGroup (Scalar a)) => VectorSpace (CD a) where
+    type Scalar (CD a) = Scalar a
+    s *^ CD a b = CD (s *^ a) (s *^ b)
+
+instance (Conj a, InnerSpace a, AdditiveGroup (Scalar a)) => InnerSpace (CD a) where
+    CD a b <.> CD c d = (a <.> c) ^+^ (b <.> d)
+
+
 class Conj a => Basis a where
     basis :: [a]
 
@@ -92,10 +135,13 @@ w = e 15
 -- @p * recip q@ is NOT the same as @recip q * p@.
 instance (Fractional a, Conj a) => Fractional (CD a) where
     fromRational a = CD (fromRational a) 0
-    recip x@(CD a b) = CD (conj a / magSq) (negate b / magSq)
-        where magSq = a*conj a + conj b * b
+    recip x@(CD a b) = CD (conj a / m) (negate b / m)
+        where m = magSq x
     
     x / y = x * recip y
 
 x \\ y = recip x * y
 infixr 7 \\
+
+magSq (CD a b) = a * conj a + conj b * b
+
