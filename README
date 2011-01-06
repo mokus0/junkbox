@@ -1,0 +1,9 @@
+This is my "junk box" of code I've written over the years.  If you've stumbled across this, you're welcome to make use of any of it but I offer no warrantee whatsoever, either express or implied, not even the implied warrantees of merchantability or fitness for any particular purpose.
+
+If you do find any of it useful or interesting, or want to make suggestions, feel free, but keep in mind some of this code I haven't even looked at since the first few months I was learning whatever language it's written in, and none of it is really anything I consider myself to be "maintaining" or actively developing.
+
+If you actually make use of it, I'd appreciate knowing about it or getting a bit of credit somewhere, but that's strictly optional.
+
+There is a file entitled "CRAPL" in this directory.  I am not a scientist, but I like its terms a lot, so I'm dual-licensing all the code in this darcs repo under the CRAPL and the simple permissive license described in the text above.  That is, I like the spirit of the CRAPL and hope you'll follow it, but if you just want to get something done and you miraculously find something useful here, don't bother jumping through any hoops.
+
+    -- James Cook (mokus@deepbondi.net)
