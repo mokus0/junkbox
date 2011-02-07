@@ -3,7 +3,7 @@
  -      (c) 2008 Cook, J. MR  SSD, Inc.
  -}
 
-module Select where
+module Functions.Select where
 
 import Data.List
 import Control.Monad.State
