@@ -15,8 +15,8 @@ instance (Ord a, Integral a) => Ord (CF a) where
     compare x y = cmp (toList x) (toList y)
         where
             cmp []     []     = EQ
-            cmp (x:_)  []     = compare 0 x
-            cmp []     (x:_)  = compare x 0
+            cmp (x:_)  []     = LT
+            cmp []     (x:_)  = GT
             cmp (x:xs) (y:ys) = compare x y `mappend` cmp ys xs
 
 instance Integral a => Num (CF a) where
