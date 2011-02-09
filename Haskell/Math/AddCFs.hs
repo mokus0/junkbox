@@ -206,11 +206,11 @@ reduceRLF rlf@(RLF a b c d)
 
 evalRLF (RLF a b c d) x = (a*x + b) / (c*x + d)
 
-evalRLF' (RLF a b c d) (Lift x)
-    | c * x + d == 0    = Infinity
 evalRLF' (RLF 0 b 0 d) _ = Lift (b/d)
 evalRLF' (RLF 0 b c d) Infinity = Lift 0
 evalRLF' (RLF a b c d) Infinity = Infinity
+evalRLF' (RLF a b c d) (Lift x)
+    | c * x + d == 0    = Infinity
 evalRLF' rlf (Lift x) = Lift (evalRLF rlf x)
 
 stepRLF (RLF a b c d)           Inf = Left (a, c)
@@ -270,7 +270,7 @@ fracToCF p q = Step d 1 (fracToCF q m) -- p/q as CF
         -- d+m/q = p/q
         (d,m) = p `divMod` q
 
-data Completed a = Lift a | Infinity
+data Completed a = Lift !a | Infinity
     deriving (Eq, Ord, Show)
 
 instance Functor Completed where
@@ -285,8 +285,9 @@ data CFRange a
 endpoints (Inside  x y) = [x,y]
 endpoints (Outside x y) = [y,x]
 
-equivRange (Inside  x y) = Outside y x
-equivRange (Outside x y) = Inside  y x
+equivRange (Inside  x y) | x /= y   = Outside y x
+equivRange (Outside x y) | x /= y   = Inside  y x
+equivRange other                    = other
 
 normalizeRange r@(Inside x y)
     | x <= y    = r
@@ -325,7 +326,10 @@ lmap f (Outside x y) = normalizeRange (Outside (f x) (f y))
 compositeCFRange cf = unions (compositeCFRanges cf)
 compositeCFRanges cf = compositeCFXRanges cf ++ compositeCFYRanges cf
 
-compositeCFLargestXRange cf = maximumBy compareRangeWidth (compositeCFXRanges cf )
+compositeCFLargestXRange cf = 
+    unions
+    --maximumBy compareRangeWidth
+     (compositeCFXRanges cf )
 
 compositeCFXRanges (CompositeCF rbf x y) =
 --    [ lmap (\y -> evalRBF' (fmap realToFrac rbf) (fmap realToFrac x) (fmap realToFrac y)) (cfRange y)
@@ -333,7 +337,10 @@ compositeCFXRanges (CompositeCF rbf x y) =
     | x <- endpoints (cfRange x)
     ]
 
-compositeCFLargestYRange cf = maximumBy compareRangeWidth (compositeCFYRanges cf )
+compositeCFLargestYRange cf = 
+    unions
+    -- maximumBy compareRangeWidth 
+    (compositeCFYRanges cf )
 compositeCFYRanges (CompositeCF rbf x y) =
 --    [ lmap (\x -> evalRBF' (fmap realToFrac rbf) (fmap realToFrac x) (fmap realToFrac y)) (cfRange x)
     [ rlfRange (contractY rbf y) x
