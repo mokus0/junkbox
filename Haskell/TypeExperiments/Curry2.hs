@@ -1,7 +1,7 @@
 {-# LANGUAGE 
         MultiParamTypeClasses, FunctionalDependencies,
         FlexibleInstances, FlexibleContexts, UndecidableInstances, 
-        EmptyDataDecls, TypeOperators, TemplateHaskell
+        EmptyDataDecls, TypeOperators, TemplateHaskell, GADTs
   #-}
 module TypeExperiments.Curry2 where
 
@@ -24,6 +24,9 @@ import Language.Haskell.TH
 import qualified GHC.Exts
 import Control.Monad
 
+import Data.Eq.Type
+import Unsafe.Coerce -- for creating GADT witness of ConsTuple bijectivity
+
 -- The implementation is indexed by peano numbers because we need a recursive
 -- construction and Data.TypeLevel's high-level decimal representation just
 -- won't do:
@@ -38,6 +41,23 @@ pred = undefined
 class ConsTuple a t1 t2 | a t1 -> t2, t2 -> a t1 where
     consTuple :: a -> t1 -> t2
     unConsTuple :: t2 -> (a, t1)
+
+data One a = One a
+    deriving (Eq, Ord, Read, Show)
+
+instance ConsTuple a () (One a) where
+    consTuple x () = One x
+    unConsTuple (One x) = (x, ())
+
+instance ConsTuple a (One b) (a,b) where
+    consTuple x (One y) = (x,y)
+    unConsTuple (x,y) = (x, One y)
+
+consEq :: (ConsTuple a t1a t2a, ConsTuple b t1b t2b) => (a := b) -> (t1a := t1b) -> (t2a := t2b)
+consEq Refl Refl = unsafeCoerce Refl
+
+unConsEq :: (ConsTuple a t1a t2a, ConsTuple b t1b t2b) => (t2a := t2b) -> (a := b, t1a := t1b)
+unConsEq Refl = unsafeCoerce (Refl, Refl)
 
 $(sequence
     -- ConsTuple instances for all supported tuple types, from (,)->(,,) up
