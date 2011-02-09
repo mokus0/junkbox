@@ -6,7 +6,7 @@ import Data.Monoid
 
 data CF a
     = Inf
-    | Step a a (CF a)   -- Step p q x = p + qxyx
+    | Step !a !a (CF a)   -- Step p q x = p + qxyx
     deriving (Eq, Show)
 
 evalCF Inf = error "evalCF: Inf"
@@ -48,8 +48,11 @@ eCF = fromList (2 : concat [[1,fromInteger n,1] | n <- [2,4..]])
 
 -- Bilinear forms on a^2
 data BilinearForm a = BF
-    { xy, x, y, k :: a 
+    { xy, x, y, k :: !a 
     } deriving (Eq, Show)
+
+instance Functor BilinearForm where
+    fmap f (BF a b c d) = BF (f a) (f b) (f c) (f d)
 
 evalBF (BF a b c d) x y = a*x*y + b*x + c*y + d
 
@@ -58,8 +61,11 @@ evalBF' _ Infinity _ = Infinity -- a*x*y + b*x + c*y + d
 evalBF' _ _ Infinity = Infinity
 
 -- | Rational bilinear form, not radial basis function
-data RBF a = RBF {p, q :: BilinearForm a}
+data RBF a = RBF {p, q :: !(BilinearForm a)}
     deriving (Eq, Show)
+
+instance Functor RBF where
+    fmap f (RBF p q) = RBF (fmap f p) (fmap f q)
 
 evalRBF (RBF p q) x y = evalBF p x y / evalBF q x y
 
@@ -77,10 +83,16 @@ mul = RBF (BF 1 0   0  0) (BF 0 0 0 1)
 dvd = RBF (BF 0 1   0  0) (BF 0 0 1 0)
 
 data CompositeCF a = CompositeCF
-    { form :: RBF a
-    , xCF :: CF a
-    , yCF :: CF a
+    { form :: !(RBF a)
+    , xCF  :: !(CF a)
+    , yCF  :: !(CF a)
     } deriving (Show)
+
+swapXY (CompositeCF (RBF (BF a b c d) (BF e f g h)) x y) =
+       (CompositeCF
+           (RBF (BF a c b d)
+                (BF e g f h))
+           y x)
 
 cfAdd x y = CompositeCF add x y
 cfSub x y = CompositeCF sub x y
@@ -91,7 +103,7 @@ stepCompositeCF cf@(CompositeCF _ Inf   _) = stepX cf
 stepCompositeCF cf@(CompositeCF _   _ Inf) = stepY cf
 stepCompositeCF cf@(CompositeCF _   x   y) = case compareRangeWidth xRange yRange of
     GT -> stepX cf
-    EQ -> stepX cf
+    EQ -> stepX (swapXY cf)
     LT -> stepY cf
     where
         xRange = compositeCFLargestXRange cf
@@ -138,10 +150,42 @@ reduceRBF orig@(RBF (BF a b c d) (BF e f g h))
         where
             q = foldl1 gcd [a,b,c,d,e,f,g,h]
 
+compositeCFToCF :: Integral a => CompositeCF a -> CF a
+compositeCFToCF = compositeCFToCFWith (emitSimpleRF . idRange)
+    where
+        idRange = id :: CFRange Rational -> CFRange Rational
+
+compositeCFToGCF :: Integral a => CompositeCF a -> CF a
+compositeCFToGCF = compositeCFToCFWith (emitGCF . idRange)
+    where
+        idRange = id :: CFRange Rational -> CFRange Rational
+
+compositeCFToCFWith :: (RealFrac b, Integral a) => (CFRange b -> Maybe (a,a)) -> CompositeCF a -> CF a
+compositeCFToCFWith shouldEmit cf = case shouldEmit (compositeCFRange cf) of
+    Just (t,u)  -> Step t u (compositeCFToCFWith shouldEmit (emit t u cf))
+    Nothing     -> either (rlfToCFWith shouldEmit)
+                          (compositeCFToCFWith shouldEmit)
+                          (stepCompositeCF cf)
+
+
 -- rational linear form:
 -- RLF a b c d = ax + b / (cx + d)
 data RLF a = RLF a a a a
     deriving (Eq, Show)
+
+-- (axy + bx + cy + d) / (exy + fx + gy + h)
+-- ((ax + c)y + (bx + d)) / ((ex + g)y + (fx + h))
+contractX (RBF (BF a b c d) (BF e f g h)) (Lift x) = RLF (a*x + c) (b*x + d) (e*x + g) (f*x + h)
+-- lim_{x->∞} ((ay + b)x + cy + d) / ((ey + f)x + (gy + h))
+-- (ay + b) / (ey + f)
+contractX (RBF (BF a b c d) (BF e f g h)) Infinity = RLF a b e f
+
+-- (axy + bx + cy + d) / (exy + fx + gy + h)
+-- ((ay + b)x + cy + d) / ((ey + f)x + (gy + h))
+contractY (RBF (BF a b c d) (BF e f g h)) (Lift y) = RLF (a*y + b) (c*y + d) (e*y + f) (g*y + h)
+-- lim_{y->∞} ((ax + c)y + (bx + d)) / ((ex + g)y + (fx + h))
+-- (ax + c) / (ex + g)
+contractY (RBF (BF a b c d) (BF e f g h)) Infinity = RLF a c e g
 
 instance Functor RLF where
     fmap f (RLF a b c d) = RLF (f a) (f b) (f c) (f d)
@@ -202,9 +246,13 @@ emitSimpleRF (Inside (Lift x) (Lift y))
 emitSimpleRF _ = Nothing
 
 emitGCF (Inside (Lift x) (Lift y))
-    | x >= 1 && y > x
-    || floor x + 1 == ceiling y
-    = Just (floor x, ceiling y - floor x)
+    | x >= 1 && 0 < d && d <= fx -- y > x
+    || (y > 0 && fx + 1 == cy)
+    = Just (fx, d)
+    where 
+        fx = floor x
+        cy = ceiling y
+        d = cy - fx
 emitGCF _ = Nothing
 
 rlfToCFWith :: (RealFrac b, Integral a) => (CFRange b -> Maybe (a,a)) -> (RLF a, CF a) -> CF a
@@ -263,35 +311,34 @@ cfRange (Step p q x) = Inside (Lift p) (Lift (p+q))   -- assume continuation is 
 toInside (Inside  x y) = Inside x y
 toInside (Outside x y) = Inside y x
 
-unions' :: (Num a, Ord a) => [CFRange a] -> CFRange a
-unions' ranges
+unions :: (Num a, Ord a) => [CFRange a] -> CFRange a
+unions ranges
     | x <= y    = Inside  x y
     | otherwise = Outside (Lift 0) (Lift 0)
     where
-        x = maximum [l | Inside l _ <- map toInside ranges]
-        y = minimum [h | Inside _ h <- map toInside ranges]
+        x = minimum [l | Inside l _ <- map toInside ranges]
+        y = maximum [h | Inside _ h <- map toInside ranges]
 
 lmap f (Inside  x y) = normalizeRange (Inside  (f x) (f y))
 lmap f (Outside x y) = normalizeRange (Outside (f x) (f y))
 
-compositeCFRange cf = 
-    compositeCFXRanges cf ++ compositeCFYRanges cf
+compositeCFRange cf = unions (compositeCFRanges cf)
+compositeCFRanges cf = compositeCFXRanges cf ++ compositeCFYRanges cf
 
 compositeCFLargestXRange cf = maximumBy compareRangeWidth (compositeCFXRanges cf )
+
 compositeCFXRanges (CompositeCF rbf x y) =
-    [ lmap (\y -> evalRBF' rbf x y) yRange
-    | x <- endpoints xRange
-    ] where
-        xRange = cfRange x
-        yRange = cfRange y
+--    [ lmap (\y -> evalRBF' (fmap realToFrac rbf) (fmap realToFrac x) (fmap realToFrac y)) (cfRange y)
+    [ rlfRange (contractX rbf x) y 
+    | x <- endpoints (cfRange x)
+    ]
 
 compositeCFLargestYRange cf = maximumBy compareRangeWidth (compositeCFYRanges cf )
 compositeCFYRanges (CompositeCF rbf x y) =
-    [ lmap (\x -> evalRBF' rbf x y) xRange
-    | y <- endpoints yRange
-    ] where
-        xRange = cfRange x
-        yRange = cfRange y
+--    [ lmap (\x -> evalRBF' (fmap realToFrac rbf) (fmap realToFrac x) (fmap realToFrac y)) (cfRange x)
+    [ rlfRange (contractY rbf y) x
+    | y <- endpoints (cfRange y)
+    ]
 
 compareRangeWidth xRaw yRaw = case (x,y) of
     (Outside xlo xhi, Outside ylo yhi) -> compare (width ylo yhi) (width xlo xhi)
@@ -316,8 +363,6 @@ Outside a b `contains` Outside Infinity d
 Outside a b `contains` Outside c d
     = a >= c && d >= b
 
--- TODO: check whether this needs any additional consideration.
--- In particular, make sure the pole of the RLF doesn't make things all wonky.
 rlfRange :: (Real a, Ord b, Fractional b) => RLF a -> CF a -> CFRange b
 rlfRange rlf@(RLF a b c d) x = normalizeRange $ case (a*d) `compare` (b*c) of
     LT -> {- antitone -} Inside fXHi fXLo
@@ -328,13 +373,6 @@ rlfRange rlf@(RLF a b c d) x = normalizeRange $ case (a*d) `compare` (b*c) of
         rlf' = fmap realToFrac rlf
         fXLo = evalRLF' rlf' xLo
         fXHi = evalRLF' rlf' xHi
-    
-    
-    -- = normalizeRange
-    -- . lmap ( evalRLF' (fmap realToFrac rlf) 
-    --        . fmap realToFrac
-    --        )
-    -- . cfRange
 
 -- TODO: 
 --  * check range stuff, especially handling of infinities; I don't think it's right.  I also 
