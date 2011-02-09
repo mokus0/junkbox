@@ -3,11 +3,44 @@ module Math.AddCFs where
 
 import Data.List (maximumBy)
 import Data.Monoid
+import Data.Ratio
 
 data CF a
     = Inf
     | Step !a !a (CF a)   -- Step p q x = p + qxyx
     deriving (Eq, Show)
+
+-- WARNING: equality is not computable on CFs!
+instance (Ord a, Integral a) => Ord (CF a) where
+    compare x y = cmp (toList x) (toList y)
+        where
+            cmp []     []     = EQ
+            cmp (x:_)  []     = compare 0 x
+            cmp []     (x:_)  = compare x 0
+            cmp (x:xs) (y:ys) = compare x y `mappend` cmp ys xs
+
+instance Integral a => Num (CF a) where
+    fromInteger x = Step (fromInteger x) 1 Inf
+    x + y = compositeCFToGCF (cfAdd x y)
+    x - y = compositeCFToGCF (cfSub x y)
+    x * y = compositeCFToGCF (cfMul x y)
+    negate Inf = Inf
+    negate (Step p q x) = Step (-p) (-q) x
+    abs x   | x < 0   = negate x
+            | otherwise = x
+    signum x = case x `compare` 0 of
+        LT -> -1
+        EQ ->  0
+        GT ->  1
+
+instance Integral a => Fractional (CF a) where
+    fromRational x = conv (fracToCF (numerator x) (denominator x))
+        where
+            conv Inf = Inf
+            conv (Step p q x) = Step (fromInteger p) (fromInteger q) (conv x)
+    recip Inf = 0
+    recip x = rlfToGCF (recipRLF, x)
+    x / y = compositeCFToGCF (cfDiv x y)
 
 evalCF Inf = error "evalCF: Inf"
 evalCF (Step p q Inf) = fromIntegral p
@@ -143,12 +176,18 @@ emitDigit t (CompositeCF (RBF (BF a b c d) (BF e f g h)) x y) =
              (BF (        e ) (        f ) (        g)  (        h )))
         x y)
 
+
+gcds :: Integral a => [a] -> a
+gcds = foldl gcd 1 . filter (/= 0)
+
 reduceRBF orig@(RBF (BF a b c d) (BF e f g h))
     | q > 1     = RBF (BF (a `div` q) (b `div` q) (c `div` q) (d `div` q))
                       (BF (e `div` q) (f `div` q) (g `div` q) (h `div` q))
     | otherwise = orig
         where
-            q = foldl1 gcd [a,b,c,d,e,f,g,h]
+            q = gcds [a,b,c,d,e,f,g,h]
+
+reduceCCF (CompositeCF rbf x y) = CompositeCF (reduceRBF rbf) x y
 
 compositeCFToCF :: Integral a => CompositeCF a -> CF a
 compositeCFToCF = compositeCFToCFWith (emitSimpleRF . idRange)
@@ -161,11 +200,12 @@ compositeCFToGCF = compositeCFToCFWith (emitGCF . idRange)
         idRange = id :: CFRange Rational -> CFRange Rational
 
 compositeCFToCFWith :: (RealFrac b, Integral a) => (CFRange b -> Maybe (a,a)) -> CompositeCF a -> CF a
-compositeCFToCFWith shouldEmit cf = case shouldEmit (compositeCFRange cf) of
+compositeCFToCFWith shouldEmit cf' = case shouldEmit (compositeCFRange cf) of
     Just (t,u)  -> Step t u (compositeCFToCFWith shouldEmit (emit t u cf))
     Nothing     -> either (rlfToCFWith shouldEmit)
                           (compositeCFToCFWith shouldEmit)
                           (stepCompositeCF cf)
+    where cf = reduceCCF cf'
 
 
 -- rational linear form:
@@ -198,11 +238,14 @@ instance Num a => Monoid (RLF a) where
         RLF (e*a + b*g) (f*a + b*h)
             (e*c + d*g) (f*c + d*h)
 
+recipRLF :: Num a => RLF a
+recipRLF = RLF 0 1 1 0
+
 reduceRLF rlf@(RLF a b c d)
     | q > 1     = RLF (a `div` q) (b `div` q) (c `div` q) (d `div` q)
     | otherwise = rlf
     where
-        q = foldl1 gcd [a, b, c, d]
+        q = gcds [a, b, c, d]
 
 evalRLF (RLF a b c d) x = (a*x + b) / (c*x + d)
 
