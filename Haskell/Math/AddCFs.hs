@@ -1,5 +1,4 @@
 -- playing with ideas from HAKMEM §101(b)
-{-# LANGUAGE RelaxedPolyRec #-}
 module Math.AddCFs where
 
 import Data.List (maximumBy)
