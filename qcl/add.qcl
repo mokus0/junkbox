@@ -1,0 +1,94 @@
+qufunct operator halfadder(quconst a, quconst b, qureg sum, qureg carry) {
+    // sum is XOR of a,b
+    CNot(sum, a);
+    CNot(sum, b);
+    
+    // carry is set if a&b both are
+    CNot(carry, a&b);
+}
+
+qufunct operator fulladder(quconst a, quconst b, qureg sum, qureg carry) {
+    // sum is XOR of a,b,carry
+    CNot(sum, a);
+    CNot(sum, b);
+    CNot(sum, carry);
+    
+    // carry is flipped in exactly 2 cases:
+    // A=B=0 and C=1 (S=1)
+    // A=B=1 and C=0 (S=0)
+    
+    if (a[0] == 0) and (b[0] == 0) and (sum[0] == 1) {
+        Not(carry);
+    } 
+    
+    if (a[0] == 1) and (b[0] == 1) and (sum[0] == 0) {
+        Not(carry);
+    }
+}
+
+// result is only correct if sum is initialized to zero
+// Does not work well at all for states with many qubits,
+// and I'm not sure whether this is due to an error in 
+// this code or in qcl
+qufunct add(quconst a, quconst b, qureg sum) {
+    int n = #a;
+    int i;
+    
+    if n != #b {
+        exit "add: a and b have different sizes";
+    }
+    if #sum <= n {
+        exit "add: target register too small";
+    }
+    
+    for i=0 to n-1 {
+        // using sum[n] as carry bit so that when the
+        // loop finishes, it will automagically be in
+        // the right place (MSB of sum).
+        fulladder(a[i], b[i], sum[i], sum[n]);
+    }
+}
+
+// specialization of fulladder to case where b is 1
+qufunct operator fullincr(quconst a, qureg sum, qureg carry) {
+    // sum is XOR of a,b,carry
+    CNot(sum, a);
+    Not(sum);
+    CNot(sum, carry);
+    
+    // carry is flipped in exactly 2 cases:
+    // A=1 and C=0 (S=0)
+    
+    if (a[0] == 1) and (sum[0] == 0) {
+        Not(carry);
+    }
+}
+
+cond qufunct operator incr(qureg a) {
+    int n = #a;
+    
+    if n>1 and a[0] { incr(a[1..n-1]); }
+    
+    Not(a[0]);
+}
+
+// two's complement negation
+qufunct negate(qureg a) {
+    Not(a);
+    incr(a);
+}
+
+// a - b
+qufunct subtract(quconst a, qureg b, qureg diff) {
+    negate(b);
+    add(a,b,diff);
+    negate(b);
+    
+    // expected "carry" is reversed
+    Not(diff[#b]);
+    
+    // except when b is zero
+    Not(b);
+    CNot(diff[#b], b);
+    Not(b);
+}
