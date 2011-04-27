@@ -2,12 +2,14 @@ module Math.ProjectiveLine.Set
     ( Set, valid, empty, full
     , singleton, cosingleton
     , range, closedRange, openRange
+    , isEmpty, isFull
     
     , member, neighborhood
     , boundaryPoints
     , foldRanges, toRangeList
     , components
     , numComponents
+    , measure
     
     , complement
     , union, unions
@@ -117,6 +119,12 @@ range (lo, incLo) (hi, incHi)
 closedRange lo hi = range (lo, True)  (hi, True)
 openRange   lo hi = range (lo, False) (hi, False)
 
+isEmpty Empty = True
+isEmpty     _ = False
+
+isFull Full = True
+isFull    _ = False
+
 -- find the boundary affecting a point; either the one at that point
 -- or the closest one below it (wrapping around if necessary).
 lookupBoundary func x m = case M.splitLookup x m of
@@ -186,13 +194,21 @@ numComponents = foldRanges 0 0 s r 0 id
         s _       = (1 +)
         r _ _ _ _ = (1 +)
 
+measure :: Num t => Set t -> t
+measure = measureBy id 0 (+) (-)
+
+measureBy s zero (+) (-) = foldRanges zero zero f g zero id
+    where
+        f x       = (+) (s x)
+        g x _ y _ = (+) (y-x)
+
 foldRanges e f s r z rs Empty = e
 foldRanges e f s r z rs Full  = f
 foldRanges e f s r z rs (Set m) 
     | M.null m  = panic "foldRanges" "invalid internal Set state"
-    | otherwise = rs (setRanges s r z (M.toAscList m))
+    | otherwise = rs (foldRangeList s r z (M.toAscList m))
 
-setRanges s r z bs@(b0:_) = loop False bs
+foldRangeList s r z bs@(b0:_) = loop False bs
     where
         loop _ [] = z
         loop emittedX ((x,b):rest)
@@ -205,20 +221,19 @@ setRanges s r z bs@(b0:_) = loop False bs
                 = s x (loop False rest)
             | otherwise         = loop False rest
 
-complementBoundary (Boundary x y)
-    = Boundary (not x) (not y)
-
 complement Empty    = Full
 complement Full     = Empty
-complement (Set m)  = Set (fmap complementBoundary m)
+complement (Set m)  = Set (fmap f m)
+    where
+        f (Boundary x y) = Boundary (not x) (not y)
 
 normalize func Empty   = Empty
 normalize func Full    = Full
 normalize func s@(Set m)
     | M.null m  = panic func "invalid internal Set state"
-    | otherwise = mbSet isFull (M.filterWithKey (\x _ -> isBoundaryIn s x) m)
+    | otherwise = mbSet (0 `member` s) (filterKeys (isBoundaryIn s) m)
     where
-        isFull = 0 `member` s
+        filterKeys f = M.filterWithKey (const . f)
 
 union x y = union' (normalize "union (1st arg)" x) (normalize "union (2nd arg)" y)
 

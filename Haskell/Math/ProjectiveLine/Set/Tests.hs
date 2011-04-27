@@ -5,45 +5,55 @@ import Math.ProjectiveLine
 import Math.ProjectiveLine.Set
 
 import Control.Applicative hiding (empty)
+import Data.List (sort)
 import Test.QuickCheck
-
-newtype PrimSet a = PrimSet { unPrimSet :: (Set a) }
+import Data.Bits (shiftR)
 
 instance Arbitrary a => Arbitrary (ProjectiveLine a) where
     arbitrary = frequency
+        -- Infinity should have roughly the same frequency as 0
         [ (1,  pure Infinity)
-        , (50, Real <$> arbitrary)
+        , (15, Real <$> arbitrary)
         ]
-
-instance (Arbitrary a, Ord a) => Arbitrary (PrimSet a) where
-    arbitrary = PrimSet <$> frequency
-            [ (1,  pure empty)
-            , (1,  pure full)
-            , (10, singleton   <$> arbitrary)
-            , (10, cosingleton <$> arbitrary)
-            , (30, uncurry range <$> (arbitrary `suchThat` isSaneRange))
-            ]
-        where
-            isSaneRange (a,b) = (fst a /= fst b) || (snd a == snd b)
 
 instance (Arbitrary a, Real a) => Arbitrary (Set a) where
-    arbitrary = sized $ \sz -> frequency
-        [ (2, unPrimSet <$> arbitrary)
-        , (1,  elements [complement] <*> arbitrary)
-        , (,) sz $ do
-            sz' <- choose (1,sz-1)
-            let a = max 1 sz'; b = max 1 (sz-sz')
-            xor <$> resize a arbitrary
-                <*> resize b arbitrary
-        ]
+    arbitrary = do
+        xs <- sort <$> arbitrary
+        
+        let arbitrarySetFromList xs l
+                | l <= 10   = scan empty xs
+                | otherwise = do
+                    let l0 = l `shiftR` 1
+                        l1 = l - l0
+                        (xs0, xs1) = splitAt l0 xs
+                    s0 <- arbitrarySetFromList xs0 l0
+                    s1 <- arbitrarySetFromList xs1 l1
+                    return (union s0 s1) 
+            
+            scan accum []   = return accum
+            scan accum xs = oneof $ concat
+                [ [ scan (union accum (singleton x)) rest
+                  | x:rest <- pure xs
+                  ]
+                , [ do
+                     (inc0, inc1) <- arbitrary
+                     scan (union accum (range (x0,inc0) (x1,inc1))) rest
+                  | x0:x1:rest <- pure xs
+                  , x0 /= x1
+                  ]
+                ]
+        
+        set <- arbitrarySetFromList xs (length xs)
+        elements [set, complement set]
 
 prop_setOp_reflects_binOp setOp binOp s1 s2 x
     =  x `member` (setOp s1 s2)
     == binOp (x `member` s1) (x `member` s2)
 
-prop_union_def      = prop_setOp_reflects_binOp union (||)
-prop_intersect_def  = prop_setOp_reflects_binOp intersect (&&)
-prop_difference_def = prop_setOp_reflects_binOp difference (\x y -> x && not y)
+prop_union_def      = prop_setOp_reflects_binOp union       (||)
+prop_intersect_def  = prop_setOp_reflects_binOp intersect   (&&)
+prop_difference_def = prop_setOp_reflects_binOp difference  (//)
+    where x // y = x && not y
 
 prop_preserves_validity op s = 
     valid s ==> valid (op s)
