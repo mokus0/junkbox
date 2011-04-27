@@ -5,8 +5,8 @@ import Math.ProjectiveLine
 import Math.ProjectiveLine.Set
 
 import Control.Applicative hiding (empty)
-import Data.List (sort)
-import Test.QuickCheck
+import Data.List (sort, nub)
+import Test.QuickCheck hiding (ranges)
 import Data.Bits (shiftR)
 
 instance Arbitrary a => Arbitrary (ProjectiveLine a) where
@@ -16,7 +16,7 @@ instance Arbitrary a => Arbitrary (ProjectiveLine a) where
         , (15, Real <$> arbitrary)
         ]
 
-instance (Arbitrary a, Real a) => Arbitrary (Set a) where
+instance (Arbitrary a, Ord a, Num a) => Arbitrary (Set a) where
     arbitrary = do
         xs <- sort <$> arbitrary
         
@@ -46,6 +46,10 @@ instance (Arbitrary a, Real a) => Arbitrary (Set a) where
         set <- arbitrarySetFromList xs (length xs)
         elements [set, complement set]
 
+prop_complement_def s x
+    =  x `member` complement s
+    == not (x `member` s)
+
 prop_setOp_reflects_binOp setOp binOp s1 s2 x
     =  x `member` (setOp s1 s2)
     == binOp (x `member` s1) (x `member` s2)
@@ -59,3 +63,11 @@ prop_preserves_validity op s =
     valid s ==> valid (op s)
 prop_preserves_validity2 op s1 s2 = 
     valid s1 && valid s2 ==> valid (op s1 s2)
+
+prop_contains_def s1 s2 
+    = s1 `contains` s2
+    == isEmpty (s2 `difference` s1)
+
+prop_count_def s is
+    =  count (intersect s (unions (map singleton is)))
+    == Real (length (nub (filter (`member` s) is)))

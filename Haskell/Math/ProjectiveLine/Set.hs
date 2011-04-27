@@ -1,15 +1,23 @@
 module Math.ProjectiveLine.Set
     ( Set, valid, empty, full
     , singleton, cosingleton
-    , range, closedRange, openRange
+    , range, closedRange, openRange, openClosed, closedOpen
     , isEmpty, isFull
     
-    , member, neighborhood
+    , member
+    , contains
+    , disjoint
+    , neighborhood
     , boundaryPoints
-    , foldRanges, toRangeList
+    , foldRanges
+    , ranges
+    , singletons
+    , rangesAndSingletons
     , components
     , numComponents
+    , numSingletons
     , measure
+    , count
     
     , complement
     , union, unions
@@ -20,8 +28,10 @@ module Math.ProjectiveLine.Set
     ) where
 
 import Data.List (foldl', intersperse)
+import Data.Maybe (fromMaybe)
 import qualified Data.Map as M
 import qualified Data.Set as S
+import Math.ProjectiveLine
 
 -- Representation of subsets of the real projective line with finite numbers
 -- of connected components, based on the following internal model:
@@ -35,7 +45,9 @@ import qualified Data.Set as S
 --     specifies whether the segment immediately to that point's "right" 
 --     (+ direction) is included.
 --
--- The topology used is the usual topology of the real projective line.
+-- The topology used is the usual topology of the real projective line; ranges
+-- can "wrap around" from high to low, so the region below the lowest bound
+-- is included if the region above the highest bound is.
 -- The type parameter of 'Set' need not actually be @ProjectiveLine a@ unless
 -- you want to be able to have boundaries at Infinity.
 
@@ -46,46 +58,59 @@ data Boundary = Boundary
 
 data Set a
     = Empty
-    | Full
     -- INVARIANT: the Map is never empty
     -- INVARIANT: every boundary is significant
+    -- Together these invariants ensure that the representation of every
+    -- Set is unique, so the derived Eq instance will work.
     | Set !(M.Map a Boundary)
+    | Full
+    deriving Eq
 
-instance (Eq a, Show a) => Show (Set a) where
+
+-- convenience constant controlling whether the Show instance will display
+-- wrapped subranges as "complement (range lo hi)" or "range hi lo"
+complementWrappedRanges = True
+
+instance (Ord a, Show a) => Show (Set a) where
     showsPrec _ Empty = showString "empty"
     showsPrec _ Full  = showString "full"
     showsPrec p other
         | null bs           = panic "showsPrec" "invalid Set"
-        | null (tail bs)    = head bs
+        | null (tail bs)    = showParen (p > 10) (head bs)
         | otherwise         = showParen (p > 10)
             ( showString "unions ["
-            . foldr (.) id (intersperse (showChar ',') bs)
+            . joinShows (showChar ',') bs
             . showChar ']'
             )
         where
-            bs = 
-                [ if x0 == x1
-                    then if inc0
-                        then showString "singleton "   . showsPrec 11 x0
-                        else showString "cosingleton " . showsPrec 11 x0
-                    else case (inc0,inc1) of
-                        (True,True) -> showString "closedRange "
-                            . showsPrec 11 x0
-                            . showChar ' '
-                            . showsPrec 11 x1
-                        (False,False) -> showString "openRange "
-                            . showsPrec 11 x0
-                            . showChar ' '
-                            . showsPrec 11 x1
-                        _  -> showString "range " 
-                            . showsPrec 11 ep0
-                            . showChar ' '
-                            . showsPrec 11 ep1
-                        
-                | (ep0@(x0, inc0), ep1@(x1, inc1)) <- 
-                    maybe (panic "showsPrec" "toRangeList returned Nothing for a non-trivial set") id 
-                        (toRangeList other)
-                ]
+            joinShows sep = foldr (.) id . intersperse sep
+            bs = maybe (panic "showsPrec" "toRangeList returned Nothing for a non-trivial set")
+                (map showComponent)
+                (rangesAndSingletons other)
+            
+            showComponent (Left x)
+                = showString "singleton "
+                . showsPrec 11 x
+            showComponent (Right ((x, False), (y, False))) | x == y
+                = showString "cosingleton "
+                . showsPrec 11 x
+            showComponent (Right r)
+                = showRange r
+            
+            showRange ((x, xI), (y, yI))
+                | complementWrappedRanges && x > y
+                    = showString "complement "
+                    . showParen True (showRange ((y, not yI), (x, not xI)))
+                | otherwise = joinShows (showChar ' ')
+                    [ showString (rangeCon xI yI)
+                    , showsPrec 11 x
+                    , showsPrec 11 y
+                    ]
+            
+            rangeCon True  True  = "closedRange"
+            rangeCon True  False = "closedOpen"
+            rangeCon False True  = "openClosed"
+            rangeCon False False = "openRange"
 
 
 valid Empty = True
@@ -118,6 +143,8 @@ range (lo, incLo) (hi, incHi)
 
 closedRange lo hi = range (lo, True)  (hi, True)
 openRange   lo hi = range (lo, False) (hi, False)
+openClosed  lo hi = range (lo, False) (hi, True)
+closedOpen  lo hi = range (lo, True)  (hi, False)
 
 isEmpty Empty = True
 isEmpty     _ = False
@@ -143,6 +170,17 @@ member x (Set m)
     | otherwise = segmentIncluded b
     where
         (bX, b) = lookupBoundary "member" x m
+
+-- Order of matches in these first 4 is very significant.
+contains Full  _ = True
+contains _  Full = False
+contains _ Empty = True
+contains Empty _ = False
+-- TODO: this can be implemented more efficiently
+contains s1 s2 = intersect s1 s2 == s2
+
+disjoint s1 s2 = isEmpty (intersect s1 s2)
+    
 
 -- Given a point and a set this function
 -- returns 3 bits describing that boundary:
@@ -175,51 +213,114 @@ boundaryPoints Empty = []
 boundaryPoints Full  = []
 boundaryPoints s@(Set m) = filter (isBoundaryIn s) (M.keys m)
 
-toRangeList :: Set t -> Maybe [((t, Bool), (t, Bool))]
-toRangeList = foldRanges Nothing Nothing s r [] Just
+-- Nothing indicates 'isFull'.
+-- If there is a range which wraps around from high to low, that range appears first.
+ranges :: Set t -> Maybe [((t, Bool), (t, Bool))]
+ranges = foldRanges (Just []) Nothing mkSet s r []
     where
-        s x                 = (:) ((x, True), (x, True))
-        r x0 inc0 x1 inc1   = (:) ((x0,inc0), (x1,inc1))
+        mkSet True  rs = Just (last rs : init rs)
+        mkSet False rs = Just rs
+        
+        s x             = id
+        r x xI y yI     = (:) ((x,   xI), (y,   yI))
+
+singletons :: Set t -> [t]
+singletons = foldRanges [] [] (const id) s r []
+    where
+        s x             = (x :)
+        r x xI y yI     = id
+
+-- Nothing indicates 'isFull'.
+-- If there is a range which wraps around from high to low, that range appears first.
+-- If a range has duplicate endpoints, it represents a "cosingleton" - an open set
+-- starting at that point and extending up through the entire set and back to that point.
+rangesAndSingletons :: Set t -> Maybe [Either t ((t, Bool), (t, Bool))]
+rangesAndSingletons = foldRanges (Just []) Nothing mkSet s r []
+    where
+        mkSet True  rs = Just (last rs : init rs)
+        mkSet False rs = Just rs
+        s x             = (:) (Left x)
+        r x xI y yI     = (:) (Right ((x, xI), (y, yI)))
 
 components :: Ord t => Set t -> [Set t]
-components = foldRanges [empty] [full] s r [] id
+components = foldRanges [empty] [full] (const id) s r []
     where
-        s x               = (singleton x                 :)
-        r x0 inc0 x1 inc1 = (range (x0, inc0) (x1, inc1) :)
+        s x             = (singleton x           :)
+        r x xI y yI     = (range (x, xI) (y, yI) :)
         
 
 numComponents :: Set t -> Int
-numComponents = foldRanges 0 0 s r 0 id
+numComponents = numComponentsWhere (const True)
+
+numSingletons :: Set t -> Int
+numSingletons = numComponentsWhere isSingleton
     where
-        s _       = (1 +)
-        r _ _ _ _ = (1 +)
+        isSingleton Left{}  = True
+        isSingleton _       = False
 
-measure :: Num t => Set t -> t
-measure = measureBy id 0 (+) (-)
-
-measureBy s zero (+) (-) = foldRanges zero zero f g zero id
+numComponentsWhere p = foldRanges 0 0 (const id) s r 0
     where
-        f x       = (+) (s x)
-        g x _ y _ = (+) (y-x)
+        s x
+            | p (Left x)                    = (1+)
+            | otherwise                     = id
+        r x xI y yI
+            | p (Right ((x,xI), (y,yI)))    = (1 +)
+            | otherwise                     = id
 
-foldRanges e f s r z rs Empty = e
-foldRanges e f s r z rs Full  = f
-foldRanges e f s r z rs (Set m) 
+-- volume of reals in set
+measure :: (Num t, Ord t) => Set (ProjectiveLine t) -> (ProjectiveLine t)
+measure = measureBy s r (+) 0 Infinity
+    where
+        s _         = 0
+        r x _ y _
+            | x < y     = y - x
+            | otherwise = Infinity
+
+-- number of integers in set
+count :: (Integral t) => Set (ProjectiveLine t) -> (ProjectiveLine t)
+count = measureBy s r (+) 0 Infinity
+    where
+        s _         = 1
+        r x xI y yI
+            | x < y     = y - x 
+                + (if xI then 0 else -1)
+                + (if yI then 1 else 0)
+            | otherwise = Infinity
+
+measureBy s r (+) zero inf = foldRanges zero inf (const id) consS consR zero
+    where
+        consS x         = (+) (s x)
+        consR x iX y iY = (+) (r x iX y iY)
+
+foldRanges empty full set sCons rCons nil Empty = empty
+foldRanges empty full set sCons rCons nil Full  = full
+foldRanges empty full set sCons rCons nil (Set m) 
     | M.null m  = panic "foldRanges" "invalid internal Set state"
-    | otherwise = rs (foldRangeList s r z (M.toAscList m))
+    | otherwise = uncurry set (foldRangeList sCons rCons nil (M.toAscList m))
 
-foldRangeList s r z bs@(b0:_) = loop False bs
+foldRangeList consSingleton consRange nil [(x,b)]
+    | segmentIncluded b = (True,  consRange x (pointIncluded b) x (pointIncluded b) nil)
+    | pointIncluded   b = (False, consSingleton x nil)
+    | otherwise         = panic "foldRanges" "invalid internal Set state"
+foldRangeList consSingleton consRange nil bs@(b0:_) = (wraps, folded)
     where
-        loop _ [] = z
-        loop emittedX ((x,b):rest)
-            | segmentIncluded b = 
-                let (x',b') = case rest of
-                        []      -> b0
-                        xb:_    -> xb
-                 in r x (pointIncluded b) x' (pointIncluded b') (loop True rest)
-            | pointIncluded b && not emittedX
-                = s x (loop False rest)
-            | otherwise         = loop False rest
+        (wraps, folded) = loop wraps bs
+        
+        loop emittedX []            = (emittedX, nil)
+        loop emittedX ((x,bX):rest) = fmap f (loop isRange rest)
+            where
+                f  | isRange               = consRange x xI y yI
+                   | xI && not emittedX    = consSingleton x
+                   | otherwise             = id
+                isRange = segmentIncluded bX
+                
+                -- Endpoint of current range; wrap around if 'rest' is empty
+                (y,bY)
+                    | null rest = b0
+                    | otherwise = head rest
+                
+                xI = pointIncluded bX
+                yI = pointIncluded bY
 
 complement Empty    = Full
 complement Full     = Empty
@@ -275,4 +376,3 @@ closure (Set m)
     = normalize "closure" 
     . mbSet True
     $ fmap (\b -> b {pointIncluded = True}) m
-    
