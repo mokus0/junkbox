@@ -85,4 +85,8 @@ src_managed/
 project/boot/
 project/plugins/project/
 
-
+########
+# Agda #
+########
+*.agdai
+MAlonzo/
