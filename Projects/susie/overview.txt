@@ -1,0 +1,7 @@
+Susie is composed of several "modules".  These are independent units of code coupled through declared "variables", which are typed labels for services modules can either provide or consume.
+
+Each module lists the variables it provides and those it consumes.  For a module to provide a variable it does not declare is OK, as long as no other module has declared it.  For a module to request access to a variable it has not declared that it consumes is also OK, but the request is guaranteed to succeed if it has declared the dependency - otherwise it may fail.
+
+Each module has one control process (a Haskell thread).  When that process exits, the module will remain loaded until all of its dependents terminate.  After all of any module's dependents are terminated and unloaded, that module will be sent 'onUnload', after which all of its remaining variables will be forcibly unloaded.
+
+Until actual dependency tracking is implemented, the dependency graph is approximated by a list.  Every module in the list is considered to depend on the one before it.

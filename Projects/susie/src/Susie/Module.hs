@@ -1,29 +1,49 @@
+{-# LANGUAGE GADTs #-}
+-- |Definitions of 'Module' type and related function, and re-export of
+-- most of the other types and functions a module implementation would need.
 module Susie.Module
-    ( Module(..), newModule
+    ( module Control.Monad.Susie
+    , module Susie.Env.Var
+    
+    , SusieModule
+    , Module(..)
+    , newModule
+    
+    , ModuleID
+    , moduleID
+    , moduleName
+    , moduleVersion
     ) where
 
-import Susie.Env
+import Control.Monad.Susie
+import Control.Monad.ST (RealWorld)
+import Susie.ModuleID
+import Susie.Env.Var
 
-import Data.Dependent.Sum
 import Data.Version
 
-data Module m s env = Module
+type SusieModule = Module SusieM RealWorld
+
+data Module m s = Module
     { name                  :: String
     , version               :: Version
-    , unloadable            :: Bool
-    , initialize            :: m env
-    , cleanup               :: env -> m ()
-    , dependencies          :: [Id s]
-    , staticExports         :: [DSum (Var s)]
+    , provides              :: [Id s]
+    , requires              :: [Id s]
+    , onLoad                :: m ()
+    , run                   :: m ()
+    , onUnload              :: m ()
     }
 
-newModule :: Monad m => Module m s env
+newModule :: Monad m => Module m s
 newModule = Module
     { name                  = error "newModule: no name given"
     , version               = Version [] []
-    , unloadable            = False
-    , initialize            = return (error "newModule: default environment")
-    , cleanup               = \_   -> return ()
-    , dependencies          = []
-    , staticExports         = []
+    , provides              = []
+    , requires              = []
+    , onLoad                = return ()
+    , run                   = return ()
+    , onUnload              = return ()
     }
+
+moduleID :: Module m s -> ModuleID
+moduleID m = mkModuleID (name m) (version m)

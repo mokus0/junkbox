@@ -1,0 +1,30 @@
+Core/Boot module:
+    - Split package into susie-core and susie-modules/susie-extras/whatever
+    - User-initiated global shutdown feature, with timeout and forced unload after the timeout.
+    - Module dependency checking and/or resolution
+    - Module load order inference (topological sort of dependency graph)
+    - Enforcement of variable access rules:
+        - modules must export variables they declare
+        - modules must not export variables that other modules declare
+        - modules must declare dependency on any variable it consumes IFF that variable is declared as provided by another module
+    - Template Haskell to declare vars with all necessary instances.  May not be possible actually.  Current TH implementation doesn't support GADTs.
+
+Concurrency model:
+    - Track actual running thread ids, not just number of threads, in thread groups
+    - Internal function able to kill all threads from a module
+    - Remove 'run' function in favor of event handlers / explicit thread spawns registered in onLoad?
+
+Intermodule communications:
+    - some kind of messaging system.  perhaps global notification channels.
+
+Console module:
+    - debugging (trace/log taking and releasing of the console)
+    - time limit for holding the console, or more sophisticated multiplexing (maybe let each module have its own virtual console and multiplex those, with multiple possible backends such as log files, ncurses, etc)
+    - possibly just replace with a generic logging module.
+
+Config module:
+    - Support editing and saving config vars from within susie, as well as automagically noticing when config files are edited on disk and reloading them (maybe also add ability for modules to register to be notified when config is changed externally)
+    - "registration domain" or similar concept, with automagic writing of defaults to files
+    - possibly implement a standalone NSUserDefaults clone.  You initialize the NSUserDefaultsManager with a search path, register defaults for each domain, etc.
+    - resolve ~ in $SUSIE_CONFIG_DIR
+

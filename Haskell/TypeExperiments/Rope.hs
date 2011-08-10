@@ -17,6 +17,7 @@ module TypeExperiments.Rope
     , fromChunksM, toChunksM
     , appendM
     , splitRopeMAt
+    , insertAtM, deleteAtM, replaceAtM
     ) where
 
 import TypeExperiments.Rope.FTUtils as FT
@@ -117,12 +118,25 @@ insertAt  :: Vector v a => Int -> Rope v a -> Rope v a -> Rope v a
 insertAt at this that = P.foldl1 append [before, this, after]
     where (before, after) = splitRopeAt at that
 
+insertAtM  :: MVector v a => Int -> RopeM v s a -> RopeM v s a -> RopeM v s a
+insertAtM at this that = P.foldl1 appendM [before, this, after]
+    where (before, after) = splitRopeMAt at that
+
 deleteAt :: Vector v a => Int -> Int -> Rope v a -> Rope v a
 deleteAt start len rope = append before after
     where
         (before, rest) = splitRopeAt start rope
         (_mid,  after) = splitRopeAt len rest
 
+deleteAtM :: MVector v a => Int -> Int -> RopeM v s a -> RopeM v s a
+deleteAtM start len rope = appendM before after
+    where
+        (before, rest) = splitRopeMAt start rope
+        (_mid,  after) = splitRopeMAt len rest
+
 replaceAt :: Vector v a => Int -> Int -> Rope v a -> Rope v a -> Rope v a
 replaceAt start len this = insertAt start this . deleteAt start len
+
+replaceAtM :: MVector v a => Int -> Int -> RopeM v s a -> RopeM v s a -> RopeM v s a
+replaceAtM start len this = insertAtM start this . deleteAtM start len
 

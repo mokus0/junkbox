@@ -17,6 +17,7 @@ module Math.ProjectiveLine.Set
     , numComponents
     , numSingletons
     , measure
+    , angularMeasure
     , count
     
     , complement
@@ -275,6 +276,22 @@ measure = measureBy s r (+) 0 Infinity
         r x _ y _
             | x < y     = y - x
             | otherwise = Infinity
+
+-- consider the projective line as being placed on the line @x = 1@ and 
+-- described by the "theta" polar coordinate (so @theta = atan y@).  
+-- This function computes the volume of the set in "theta space".
+-- The empty set has volume 0, the full set has volume 'pi', and any 
+-- set of the form @-a < x < 1/a@ has volume @pi/2@.
+angularMeasure :: (Floating t, Ord t) => Set (ProjectiveLine t) -> t
+angularMeasure = measureBy s r (+) 0 pi
+    where
+        s _         = 0
+        r x _ y _
+            | x < y     = atan' y - atan' x
+            | otherwise = pi + atan' y - atan' x
+        
+        atan' Infinity = pi/2
+        atan' (Real x) = atan x
 
 -- number of integers in set
 count :: (Integral t) => Set (ProjectiveLine t) -> (ProjectiveLine t)
