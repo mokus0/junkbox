@@ -118,8 +118,16 @@ instance (a ~ b, a ~ c, Show a) => Diagonal (a,b) Pair c where
 
 instance Functor (DWrap Pair) where
         fmap f (Diag2 a b) = Diag2 (f a) (f b)
--- instance a ~ b => Functor (Diag (a,b)) where
---         fmap f (Diag2 a b) = Diag2 (f a) (f b)
+
+data Triple
+data instance DWrap Triple c = Diag3 c c c
+type instance Diag Triple c = (c,c,c)
+instance (a ~ b, a ~ c, a ~ d, Show a) => Diagonal (a,b,c) Triple d where
+        wrap (a,b,c) = Diag3 a b c
+        unWrap (Diag3 a b c) = (a,b,c)
+
+instance Functor (DWrap Triple) where
+        fmap f (Diag3 a b c) = Diag3 (f a) (f b) (f c)
 
 instance Show c => Show (DWrap Pair c) where
         showsPrec p (Diag2 a b) = showParen (p > 10) showDiag
