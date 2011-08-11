@@ -170,6 +170,12 @@ emitReg t (CompositeCF (RBF (BF a b c d) (BF e f g h)) x y) =
              (BF (a-t*e) (b-t*f) (c-t*g) (d-t*h))) 
         x y)
 
+-- emitDigit: subtract 't' and then multiply by 10
+-- 10((axy + bx + cy + d) / (exy + fx + gy + h) - t)
+-- = 10((axy + bx + cy + d) / (exy + fx + gy + h) - t(exy + fx + gy + h)/(exy + fx + gy + h))
+-- = 10((axy + bx + cy + d - (texy + tfx + tgy + th)) / (exy + fx + gy + h))
+-- = 10(((a-te)xy + (b-tf)x + (c-tg)y + (d-th)) / (exy + fx + gy + h))
+-- = (10(a-te)xy + 10(b-tf)x + 10(c-tg)y + 10(d-th)) / (exy + fx + gy + h)
 emitDigit t (CompositeCF (RBF (BF a b c d) (BF e f g h)) x y) = 
     (CompositeCF 
         (RBF (BF (10*(a-t*e)) (10*(b-t*f)) (10*(c-t*g)) (10*(d-t*h))) 
@@ -209,7 +215,7 @@ compositeCFToCFWith shouldEmit cf' = case shouldEmit (compositeCFRange cf) of
 
 
 -- rational linear form:
--- RLF a b c d = ax + b / (cx + d)
+-- RLF a b c d = (ax + b) / (cx + d)
 data RLF a = RLF a a a a
     deriving (Eq, Show)
 
@@ -260,6 +266,14 @@ stepRLF (RLF a b c d)           Inf = Left (a, c)
 stepRLF (RLF a b c d) (Step p q x') = Right (RLF (a*p+b) (a*q) (c*p+d) (c*q), x')
 
 emitRLF t u (RLF a b c d) = RLF (c*u) (d*u) (a-c*t) (b-d*t)
+
+-- 10((ax + b) / (cx + d) - t)
+-- 10((ax + b) / (cx + d) - t(cx + d)/(cx + d))
+-- 10((ax + b - (tcx + td)) / (cx + d))
+-- 10(((a-tc)x + (b-td)) / (cx + d))
+-- (10(a-tc)x + 10(b-td)) / (cx + d)
+emitDigitRLF t (RLF a b c d) =
+    RLF (10*(a-t*c)) (10*(b-t*d)) c d
 
 rlfToCF :: (Integral a) => (RLF a, CF a) -> CF a
 rlfToCF = rlfToCFWith (emitSimpleRF . idRange)
