@@ -88,5 +88,13 @@ project/plugins/project/
 ########
 # Agda #
 ########
+
 *.agdai
 MAlonzo/
+
+#######
+# Coq #
+#######
+
+*.glob
+*.vo
