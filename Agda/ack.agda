@@ -15,7 +15,7 @@ a ↑[ suc n ] 0 = 1
 a ↑[ suc n ] (suc b) = a ↑[ n ] (a ↑[ suc n ] b)
 
 -- A helper - 3 ↑[   n ] 3 iterated on 'n' starting at n = 4.
--- "g 0" is already incomprehensibly large.  On the scale of "g 1", I believe
+-- "g 1" is already incomprehensibly large.  On the scale of "g 1", I believe
 -- the number of distinquishable configurations of all the matter in the
 -- observable universe would be approximately zero.
 g : ℕ → ℕ
