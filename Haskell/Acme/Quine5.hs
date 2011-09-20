@@ -1,0 +1,1 @@
+main=putStr$x++show x;x="main=putStr$x++show x;x="

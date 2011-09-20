@@ -1,0 +1,10 @@
+Quines for lambdabot's @let.
+
+@let qu s=text s<>text(show s);qn=qu"@let qu s=text s<>text(show s);qn=qu"
+
+@let quine = text$ap(++)show"@let quine = text$ap(++)show"
+
+Or for @eval:
+
+> text$ap(++)show"> text$ap(++)show"
+
