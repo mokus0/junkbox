@@ -32,7 +32,7 @@ import Data.Vector.Generic.Mutable  as MV
 import Prelude                      as P
 
 newtype Rope  v   a = Rope  { ropeFT  :: FingerTree (Sum Int) (Chunk  v   a) }
-newtype RopeM v s a = RopeM { ropeMFT :: FingerTree (Sum Int) (ChunkM v s a)  }
+newtype RopeM v s a = RopeM { ropeMFT :: FingerTree (Sum Int) (ChunkM v s a) }
 
 fromChunks :: Vector v a => [v a] -> Rope v a
 fromChunks = Rope . FT.fromList . P.map Chunk
@@ -67,7 +67,7 @@ instance MVector v a => MVector (RopeM v) a where
     basicUnsafeSlice start len (RopeM r) = RopeM
         (sliceFingerTreeBy basicUnsafeSplitMV start len r)
     
-    basicOverlaps (RopeM v1) (RopeM v2) 
+    basicOverlaps (RopeM v1) (RopeM v2)
         = F.any (flip F.any v2 . basicOverlaps) v1
     
     basicUnsafeNew 0 = return (RopeM FT.empty)
