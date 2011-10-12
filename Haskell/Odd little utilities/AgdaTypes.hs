@@ -14,11 +14,9 @@ parseModule = absolute >=> parseFile' moduleParser
 
 dumpSigs = mapM_ print . mapMaybe justSigs
 
-justWhen p x
-    | p x       = Just x
-    | otherwise = Nothing
+guarded p x = guard (p x) >> return x
 
-mapMaybe' f = justWhen (not . null) . mapMaybe f
+mapMaybe' f = guarded (not . null) . mapMaybe f
 
 justSigs (Module range name binds decls) =
     fmap (Module range name binds) (mapMaybe' justSigs decls)
