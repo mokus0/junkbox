@@ -31,8 +31,9 @@ newtype STRef s a = STRef (Tag s a)
 -- I'm somewhat surprised that this type isn't inferred correctly.
 -- with all the let bindings inferred monomorphically, shouldn't it be well-enough
 -- constrained?
--- Actually, it's handled correctly with -XGADTs but not without!  Very odd, 
+-- Actually, it's inferred correctly with -XGADTs but not without!  Very odd, 
 -- especially considering Tag is not even implemented using GADTs...
+newSTRef :: Monad m => a -> STT s m (STRef s a)
 newSTRef x = STT $ do
     (i, m) <- get
     let k  = veryUnsafeMkTag i
