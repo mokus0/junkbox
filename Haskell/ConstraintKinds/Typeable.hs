@@ -153,3 +153,24 @@ instance Typeable7 t => TypeableCxt (Typeable7 t) where
         where
             con = mkTyCon3 "base" "Data.Typeable" "Typeable7"
 
+instance TypeableCxt () where
+    typeOfCxt = Tagged (mkTyConApp con [])
+        where con = mkTyCon3 "base" "Prelude" "()"
+
+instance (TypeableCxt a, TypeableCxt b) => TypeableCxt (a, b) where
+    typeOfCxt = Tagged (mkTyConApp con 
+            [ untag (typeOfCxt :: Tagged (Dict a) TypeRep)
+            , untag (typeOfCxt :: Tagged (Dict b) TypeRep)
+            ])
+        where con = mkTyCon3 "base" "Prelude" "(,)"
+
+instance (TypeableCxt a, TypeableCxt b, TypeableCxt c) => TypeableCxt (a, b, c) where
+    typeOfCxt = Tagged (mkTyConApp con 
+            [ untag (typeOfCxt :: Tagged (Dict a) TypeRep)
+            , untag (typeOfCxt :: Tagged (Dict b) TypeRep)
+            , untag (typeOfCxt :: Tagged (Dict c) TypeRep)
+            ])
+        where con = mkTyCon3 "base" "Prelude" "(,,)"
+
+-- and so on...
+
