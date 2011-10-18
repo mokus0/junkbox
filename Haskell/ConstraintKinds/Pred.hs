@@ -99,3 +99,44 @@ instance (TypeableCxt1 c1, TypeableCxt1 c2) => TypeableCxt1 (c1 :&: c2) where
         ])
         where con = mkTyCon3 "junkbox" "ConstraintKinds.Pred" "(:&:)"
 
+instance Ord :<: Eq where weaken Dict = Dict
+
+instance Num :<: Eq   where weaken Dict = Dict
+instance Num :<: Show where weaken Dict = Dict
+
+instance Fractional :<: Num  where weaken Dict = Dict
+instance Fractional :<: Eq   where weaken Dict = Dict
+instance Fractional :<: Show where weaken Dict = Dict
+
+instance Real :<: Num  where weaken Dict = Dict
+instance Real :<: Ord  where weaken Dict = Dict
+instance Real :<: Eq   where weaken Dict = Dict
+instance Real :<: Show where weaken Dict = Dict
+
+instance Integral :<: Enum where weaken Dict = Dict
+instance Integral :<: Real where weaken Dict = Dict
+instance Integral :<: Num  where weaken Dict = Dict
+instance Integral :<: Ord  where weaken Dict = Dict
+instance Integral :<: Eq   where weaken Dict = Dict
+instance Integral :<: Show where weaken Dict = Dict
+
+instance RealFrac :<: Real       where weaken Dict = Dict
+instance RealFrac :<: Fractional where weaken Dict = Dict
+instance RealFrac :<: Num        where weaken Dict = Dict
+instance RealFrac :<: Ord        where weaken Dict = Dict
+instance RealFrac :<: Eq         where weaken Dict = Dict
+instance RealFrac :<: Show       where weaken Dict = Dict
+
+instance Floating :<: Fractional where weaken Dict = Dict
+instance Floating :<: Num        where weaken Dict = Dict
+instance Floating :<: Eq         where weaken Dict = Dict
+instance Floating :<: Show       where weaken Dict = Dict
+
+instance RealFloat :<: Real       where weaken Dict = Dict
+instance RealFloat :<: Floating   where weaken Dict = Dict
+instance RealFloat :<: Fractional where weaken Dict = Dict
+instance RealFloat :<: Num        where weaken Dict = Dict
+instance RealFloat :<: Ord        where weaken Dict = Dict
+instance RealFloat :<: Eq         where weaken Dict = Dict
+instance RealFloat :<: Show       where weaken Dict = Dict
+

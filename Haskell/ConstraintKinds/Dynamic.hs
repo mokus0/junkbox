@@ -25,6 +25,9 @@ data Dynamic cxt where Dynamic :: (Typeable t, cxt t) => t -> Dynamic cxt
 --  toDyn (42 :: Int) :: Dynamic Show
 --  λ> toDyn (42 :: Int) :: Dynamic (Read :&: (Show :&: ((~) Int) :&: Eq))
 --  toDyn (42 :: Int) :: Dynamic ((:&:) Read ((:&:) ((:&:) Show ((~) Int)) Eq))
+--  λ> toDyn pi :: Dynamic RealFloat 
+--  toDyn (3.141592653589793 :: Double) :: Dynamic RealFloat
+
 
 instance (TypeableCxt1 cxt, cxt :<: Show) => Show (Dynamic cxt) where
     showsPrec p d = case weakenDyn d :: Dynamic Show of
