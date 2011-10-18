@@ -20,17 +20,23 @@ data Dynamic cxt where Dynamic :: (Typeable t, cxt t) => t -> Dynamic cxt
 -- this, but can now say things like:
 --
 --  λ> toDyn (42 :: Int) :: Dynamic (Show :&: Read)
---  Dynamic 42
+--  toDyn (42 :: Int) :: Dynamic ((:&:) Show Read)
 --  λ> toDyn (42 :: Int) :: Dynamic (Show)
---  Dynamic 42
+--  toDyn (42 :: Int) :: Dynamic Show
 --  λ> toDyn (42 :: Int) :: Dynamic (Read :&: Show)
---  Dynamic 42
+--  toDyn (42 :: Int) :: Dynamic ((:&:) Read Show)
 
-instance (cxt :<: Show) => Show (Dynamic cxt) where
+instance (TypeableCxt1 cxt, cxt :<: Show) => Show (Dynamic cxt) where
     showsPrec p d = case weakenDyn d :: Dynamic Show of
         Dynamic it -> showParen (p > 10)
             ( showString "toDyn "
-            . showsPrec 11 it
+            . showParen True
+                ( showsPrec 11 it
+                . showString " :: "
+                . showsPrec 11 (typeOf it)
+                )
+            . showString " :: Dynamic "
+            . showsPrec 11 (untag (typeOfCxt1 :: Tagged (Dict (cxt ())) TypeRep))
             ) 
 
 instance TypeableCxt1 cxt => Typeable (Dynamic cxt) where

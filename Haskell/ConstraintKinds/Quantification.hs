@@ -34,3 +34,8 @@ instance Exists Read where type Witness Read = ()
 instance Exists Eq   where type Witness Eq   = ()
 
 -- and so on...
+
+-- sadly, this is not possible, for obvious reasons:
+-- instance Exists p => Exists (p :&: q) where type Witness (p :&: q) = Witness p
+-- instance Exists q => Exists (p :&: q) where type Witness (p :&: q) = Witness q
+

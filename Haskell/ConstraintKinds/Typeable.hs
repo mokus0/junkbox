@@ -29,7 +29,7 @@ instance (TypeableCxt2 p, Typeable t) => TypeableCxt1 (p t) where
 instance TypeableCxt2 (~) where
     typeOfCxt2 = Tagged (mkTyConApp eqCon [])
         where
-            eqCon = mkTyCon3 "base" "Prelude" "~"
+            eqCon = mkTyCon3 "base" "Prelude" "(~)"
 
 
 

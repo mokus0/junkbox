@@ -51,7 +51,7 @@ instance (TypeableCxt1 c1, TypeableCxt1 c2) => TypeableCxt (c1 :<: c2) where
         [ untag (typeOfCxt1 :: Tagged (Dict (c1 ())) TypeRep)
         , untag (typeOfCxt1 :: Tagged (Dict (c2 ())) TypeRep)
         ])
-        where con = mkTyCon3 "junkbox" "ConstraintKinds.Pred" ":<:"
+        where con = mkTyCon3 "junkbox" "ConstraintKinds.Pred" "(:<:)"
 
 instance TypeableCxt1 True where
     typeOfCxt1 = Tagged (mkTyConApp con [])
@@ -70,5 +70,5 @@ instance (TypeableCxt1 c1, TypeableCxt1 c2) => TypeableCxt1 (c1 :&: c2) where
         [ untag (typeOfCxt1 :: Tagged (Dict (c1 ())) TypeRep)
         , untag (typeOfCxt1 :: Tagged (Dict (c2 ())) TypeRep)
         ])
-        where con = mkTyCon3 "junkbox" "ConstraintKinds.Pred" ":&:"
+        where con = mkTyCon3 "junkbox" "ConstraintKinds.Pred" "(:&:)"
 
