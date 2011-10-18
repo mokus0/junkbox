@@ -23,8 +23,8 @@ data Dynamic cxt where Dynamic :: (Typeable t, cxt t) => t -> Dynamic cxt
 --  toDyn (42 :: Int) :: Dynamic ((:&:) Show Read)
 --  λ> toDyn (42 :: Int) :: Dynamic (Show)
 --  toDyn (42 :: Int) :: Dynamic Show
---  λ> toDyn (42 :: Int) :: Dynamic (Read :&: Show)
---  toDyn (42 :: Int) :: Dynamic ((:&:) Read Show)
+--  λ> toDyn (42 :: Int) :: Dynamic (Read :&: (Show :&: ((~) Int) :&: Eq))
+--  toDyn (42 :: Int) :: Dynamic ((:&:) Read ((:&:) ((:&:) Show ((~) Int)) Eq))
 
 instance (TypeableCxt1 cxt, cxt :<: Show) => Show (Dynamic cxt) where
     showsPrec p d = case weakenDyn d :: Dynamic Show of

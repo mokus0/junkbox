@@ -43,6 +43,33 @@ instance (c1 t, c2 t) => (:&:) c1 c2 t
 instance (c :&: d) :<: c where weaken Dict = Dict
 instance (c :&: d) :<: d where weaken Dict = Dict
 
+-- Things are not as quite as nice as they "ought" to be, though...
+-- instance (c :<: e) => (c :&: d) :<: e
+-- instance (c :<: d) => (c :&: d) :<: e
+
+-- the following work, though (so at least "small" cases can be covered, but
+-- with an exponential explosion of instances):
+instance ((c :&: d) :&: e) :<: c where weaken Dict = Dict
+
+instance ((c :&: d) :&: e) :<: d where weaken Dict = Dict
+instance (c :&: (d :&: e)) :<: d where weaken Dict = Dict
+
+instance (c :&: (d :&: e)) :<: e where weaken Dict = Dict
+
+
+instance (((c :&: d) :&: e) :&: f) :<: c where weaken Dict = Dict
+
+instance (((c :&: d) :&: e) :&: f) :<: d where weaken Dict = Dict
+instance ((c :&: (d :&: e)) :&: f) :<: d where weaken Dict = Dict
+instance (c :&: ((d :&: e) :&: f)) :<: d where weaken Dict = Dict
+
+instance ((c :&: (d :&: e)) :&: f) :<: e where weaken Dict = Dict
+instance (c :&: ((d :&: e) :&: f)) :<: e where weaken Dict = Dict
+instance (c :&: (d :&: (e :&: f))) :<: e where weaken Dict = Dict
+
+instance (c :&: (d :&: (e :&: f))) :<: f where weaken Dict = Dict
+
+
 strengthen :: Dict1 c t -> Dict1 d t -> Dict1 (c :&: d) t
 strengthen Dict Dict = Dict
 
