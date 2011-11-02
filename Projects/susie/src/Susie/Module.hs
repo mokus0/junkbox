@@ -4,6 +4,7 @@
 module Susie.Module
     ( module Control.Monad.Susie
     , module Susie.Env.Var
+    , module Susie.Env.Var.TH
     
     , SusieModule
     , Module(..)
@@ -19,6 +20,7 @@ import Control.Monad.Susie
 import Control.Monad.ST (RealWorld)
 import Susie.ModuleID
 import Susie.Env.Var
+import Susie.Env.Var.TH
 
 import Data.Version
 

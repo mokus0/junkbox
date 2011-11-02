@@ -15,10 +15,10 @@ module Susie.Env.Var
     ) where
 
 import Control.Monad.Primitive
-import qualified Data.Dependent.Map as M
 import Data.Functor.Identity
 import Data.GADT.Compare
 import Data.GADT.Show
+import Data.Maybe
 import Data.Unique.Tag
 import Data.Typeable
 import Unsafe.Coerce
@@ -29,16 +29,18 @@ import Unsafe.Coerce
 -- variables:
 -- A variable is either a wrapped GADT constructor or a runtime-created Tag
 data Var s a where
+    -- | Dynamically-created variable.  The string is for human consumption; it
+    -- is irrelevant to the identity of the variable.  Create using 'create'.
     TagVar :: String -> !(Tag s a) -> Var s a
+    -- | Statically-declared variable.  The string is for human consumption; it
+    -- is irrelevant to the identity of the variable.  Declare using 'declare' or 'declareAs'.
     ExtVar :: (Typeable1 t, GCompare t) => String -> !(t a) -> Var s a
     deriving Typeable
 
 instance Eq (Var s a) where
-    k1 == k2 = case gcompare k1 k2 of
-        GEQ -> True; _ -> False
+    k1 == k2 = isJust (geq k1 k2)
 instance Ord (Var s a) where
-    compare k1 k2 = case gcompare k1 k2 of
-        GLT -> LT; GEQ -> EQ; GGT -> GT
+    compare k1 k2 = weakenOrdering (gcompare k1 k2)
 
 instance Show (Var s a) where
     showsPrec = gshowsPrec

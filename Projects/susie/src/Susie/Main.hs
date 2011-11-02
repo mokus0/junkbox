@@ -46,4 +46,4 @@ realSusie config = runSusieM $ do
                 then io (relaunchMaster continueWith)
                 else return ()
 
-main = susie config
+-- main = susie config

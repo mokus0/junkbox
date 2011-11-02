@@ -35,7 +35,7 @@ readVar :: Var RealWorld t -> SusieM t
 readVar v = do
     mbX <- tryReadVar v
     case mbX of
-        Nothing -> fail "readVar: variable is not set"
+        Nothing -> fail ("readVar: variable " ++ varName v ++ " is not set")
         Just x  -> return x
 
 tryReadVar :: Var RealWorld t -> SusieM (Maybe t)

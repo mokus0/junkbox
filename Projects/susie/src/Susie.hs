@@ -1,4 +1,4 @@
-module Susie where
+module Main where
 
 import Susie.Main
 import Susie.Module.Console

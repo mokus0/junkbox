@@ -5,6 +5,7 @@
   #-}
 module Susie.Env
     ( module Susie.Env.Var
+    , module Susie.Env.Var.TH
     
     , Env
     , Entry(..)
@@ -20,13 +21,12 @@ module Susie.Env
 import Data.Dependent.Sum
 import Data.GADT.Compare
 import Susie.Env.Var
+import Susie.Env.Var.TH
 import Susie.ModuleID
 import qualified Data.Dependent.Map as M
 
 -- An environment is a mapping from variables to values
-newtype Env s = Env 
-    { entriesByVar  :: M.DMap (Subst1 (Entry s) (Var s))
-    }
+newtype Env s = Env (M.DMap (Subst1 (Entry s) (Var s)))
 
 data Subst1 f x a where
     Subst1 :: !(x a) -> Subst1 f x (f a)

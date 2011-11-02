@@ -9,9 +9,7 @@ import Susie.Module.Config
 import qualified Susie.Module.IRC.Config as Config
 
 import Control.Monad
-import Data.Maybe
 import qualified Data.Map as M
-import Data.PropertyList
 
 ircModule :: SusieModule
 ircModule = newModule

@@ -7,7 +7,6 @@ Core/Boot module:
         - modules must export variables they declare
         - modules must not export variables that other modules declare
         - modules must declare dependency on any variable it consumes IFF that variable is declared as provided by another module
-    - Template Haskell to declare vars with all necessary instances.  May not be possible actually.  Current TH implementation doesn't support GADTs.
 
 Concurrency model:
     - Track actual running thread ids, not just number of threads, in thread groups

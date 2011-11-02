@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, DeriveDataTypeable #-}
+{-# LANGUAGE GADTs, DeriveDataTypeable, TemplateHaskell #-}
 -- |This module provides a simple lock mediating access to the console, so that
 -- other modules can use it without stepping on one another.
 module Susie.Module.Console
@@ -17,20 +17,11 @@ import Data.Typeable
 import Data.GADT.Compare
 import Data.GADT.Show
 
-data ConsoleVars t where
-    Console :: ConsoleVars (MVar ())
-    deriving (Typeable)
+declareVars [d|
+    data ConsoleVars t where
+        ConsoleVar :: ConsoleVars (MVar ())
+ |]
 
-instance GEq ConsoleVars where
-    geq Console Console = Just Refl
-
-instance GCompare ConsoleVars where
-    gcompare Console Console = GEQ
-
-instance GShow ConsoleVars where
-    gshowsPrec p Console = showString "Console"
-
-consoleVar = declare Console
 console = varToId consoleVar
 
 consoleModule :: SusieModule

@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -- |The boot module is loaded and unloaded by susie's 'main' function.  Its
 -- responsibility is to load, monitor, and unload all configured plugins, 
@@ -25,43 +26,16 @@ import Control.Exception.Peel
 import Control.Monad
 import Control.Monad.Loops
 import Control.Monad.Susie.Internal
-import Data.GADT.Compare
-import Data.GADT.Show
 import Data.Time
-import Data.Typeable
 import Susie.Env
 import Susie.Module
 
-data ModuleVar t where
-    LastBoot    :: ModuleVar UTCTime
-    Modules     :: ModuleVar [SusieModule]
-    RestartWith :: ModuleVar [String]
-    deriving Typeable
-
-instance GEq ModuleVar where
-    geq LastBoot LastBoot = Just Refl
-    geq Modules  Modules  = Just Refl
-    geq _ _ = Nothing
-
-instance GCompare ModuleVar where
-    gcompare LastBoot LastBoot = GEQ
-    gcompare LastBoot _ = GLT
-    gcompare _ LastBoot = GGT
-    
-    gcompare Modules Modules = GEQ
-    gcompare Modules _ = GLT
-    gcompare _ Modules = GGT
-    
-    gcompare RestartWith RestartWith = GEQ
-
-instance GShow ModuleVar where
-    gshowsPrec _ LastBoot    = showString "LastBoot"
-    gshowsPrec _ Modules     = showString "Modules"
-    gshowsPrec _ RestartWith = showString "RestartWith"
-
-lastBoot    = declare LastBoot
-bootModules = declare Modules
-restartWith = declare RestartWith
+declareVars [d|
+    data ModuleVar t where
+        LastBoot    :: ModuleVar UTCTime
+        BootModules :: ModuleVar [SusieModule]
+        RestartWith :: ModuleVar [String]
+    |]
 
 bootModuleName    = name    bootModule
 bootModuleVersion = version bootModule
@@ -107,7 +81,7 @@ loadModule m = do
             return loaded
         
         else do
-            fail "loadModule: requirements not satisfied"
+            fail ("loadModule: requirements not satisfied for module " ++ name m)
 
 runModule :: SusieModule -> SusieM ()
 runModule m = inModule (moduleID m) (run m)

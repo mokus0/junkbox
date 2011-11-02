@@ -16,5 +16,46 @@ description:            Modular IRC bot
 
 Library
   hs-source-dirs:       src
-  exposed-modules:      
-  build-depends:        base >= 3, dependent-maps, dependent-sum, dyre
+  ghc-options:          -fwarn-unused-imports -fwarn-unused-binds
+  
+  exposed-modules:      Susie.Env
+                        Susie.Main
+                        Susie.Module
+                        Susie.Module.Boot
+                        Susie.Module.Config
+                        Susie.Module.Config.Cache
+                        Susie.Module.Console
+                        Susie.Module.IRC
+                        Susie.Module.IRC.Config
+                        Susie.Module.State
+                        
+  
+  other-modules:        Control.Monad.Susie
+                        Control.Monad.Susie.Internal
+                        Susie.Env.Var
+                        Susie.Env.Var.TH
+                        Susie.ModuleID
+  
+  build-depends:        base >= 3,
+                        containers,
+                        dependent-map,
+                        dependent-sum,
+                        dependent-sum-template,
+                        directory,
+                        dyre,
+                        filepath,
+                        monad-loops,
+                        monad-peel,
+                        mtl,
+                        prim-uniq,
+                        primitive,
+                        property-list,
+                        stm,
+                        template-haskell,
+                        threads,
+                        time,
+                        transformers
+
+Executable susie
+  hs-source-dirs:       src
+  main-is:              Susie.hs

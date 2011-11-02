@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, DeriveDataTypeable #-}
+{-# LANGUAGE GADTs, DeriveDataTypeable, TemplateHaskell #-}
 -- |Configuration interface using a XML Property Lists for a mutable
 -- configuration/user-editable-state store.
 module Susie.Module.Config
@@ -12,9 +12,6 @@ import Susie.Module
 import Susie.Module.Config.Cache
 import Data.Maybe
 import Data.PropertyList
-import Data.Typeable
-import Data.GADT.Compare
-import Data.GADT.Show
 import System.Directory
 import System.Environment
 import System.FilePath
@@ -44,20 +41,11 @@ initializeState = do
         , confCache = cache
         }
 
-data ConfigVars t where
-    ConfigService :: ConfigVars State
-    deriving (Typeable)
+declareVars [d|
+    data ConfigVars t where
+        ConfigState :: ConfigVars State
+ |]
 
-instance GEq ConfigVars where
-    geq ConfigService ConfigService = Just Refl
-
-instance GCompare ConfigVars where
-    gcompare ConfigService ConfigService = GEQ
-
-instance GShow ConfigVars where
-    gshowsPrec _ ConfigService = showString "ConfigService"
-
-configState   = declare ConfigService
 configService = varToId configState
 
 configModule :: SusieModule
