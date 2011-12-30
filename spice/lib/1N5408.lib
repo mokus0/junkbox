@@ -1,0 +1,4 @@
+*SRC=1N5408;DI_1N5408;Diodes;Si;  1.00kV  3.00A  3.00us   Diodes Inc. Standard Rectifier 
+.MODEL DI_1N5408 D  ( IS=63.0n RS=14.1m BV=1.00k IBV=10.0u 
++                     CJO=53.0p  M=0.333 N=1.70 TT=4.32u )
+

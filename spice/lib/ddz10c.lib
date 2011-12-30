@@ -1,0 +1,12 @@
+*SRC=DDZ10C;DI_DDZ10C;Diodes;Zener <=10V; 10.0V 0.500W Diodes Inc. ZENER
+*SYM=HZEN
+
+.SUBCKT DI_DDZ10C 1 2 
+* Terminals A K
+D1 1 2 DF
+DZ 3 1 DR
+VZ 2 3 7.65
+.MODEL DF D ( IS=20.6p RS=33.0 N=1.10
++             CJO=39.7p VJ=0.750 M=0.330 TT=50.1n )
+.MODEL DR D ( IS=4.12f RS=4.11 N=3.00 )
+.ENDS

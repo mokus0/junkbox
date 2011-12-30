@@ -1,0 +1,76 @@
+MOSFET PWM circuit
+* from http://www.extremecircuits.net/2010/06/dimmer-with-mosfet.html
+* internal ground connections are commented out, because they pretty reliably
+* make the sim hang, barf, and/or do weird things, so I can't help wondering
+* if I'm misreading or mismodeling the diagram...
+
+.include lib/1N4007.lib
+.include lib/1N5408.lib
+.include lib/buz41a.lib
+.include lib/ddz10c.lib
+
+.option rshunt=1G
+
+* power source
+Vsig Vin Vneutral sin(0 120V 60Hz)
+Rneut Vneutral 0 0.5
+
+* load filter (optional)
+* Rnofilt j1 j11 1m
+
+* RC low pass, cutoff at 265Hz
+Rfilt j1 j11        150
+Cfilt j11 vNeutral  4u
+
+
+* load
+Rload Vload Vneutral 330
+Vprobe Vload j11 dc 0
+
+* PWM input signal
+* Vctl PWM 0 dc 3.3                                   $ 100% duty cycle
+* Vctl PWM 0 pulse(0 3.3 2ns 2ns 2ns 166.7us 1.667ms) $ 600Hz, 10% duty cycle
+* Vctl PWM 0 pulse(0 3.3 2ns 2ns 2ns 83.3us 833us)    $ 1.2KHz, 10% duty cycle
+* Vctl PWM 0 pulse(0 3.3 2ns 2ns 2ns 40us 400us)      $ 2.5KHz, 10% duty cycle
+* Vctl PWM 0 pulse(0 3.3 2ns 2ns 2ns 20us 200us)      $ 5KHz, 10% duty cycle
+* Vctl PWM 0 pulse(0 3.3 2ns 2ns 2ns 10us 100us)      $ 10KHz, 10% duty cycle
+Vctl PWM 0 pulse(0 3.3 2ns 2ns 2ns 5us 50us)        $ 20KHz, 10% duty cycle
+* Vctl PWM 0 pulse(0 3.3 2ns 2ns 2ns 3.3us 33us)      $ 33KHz, 10% duty cycle
+* Vctl PWM 0 pulse(0 3.3 2ns 2ns 2ns 2us 20us)        $ 50KHz, 10% duty cycle
+
+* control signal isolation
+.model switch SW (VT=2.1)
+S1 j8 j10 PWM 0 switch          $ standin for optocoupler
+R2 j3 j10 22k
+* Rgnd3 j3 0 1m
+* Cgnd3 j3 0 0.01f
+
+* Rectifier section
+D2 j1  j2  DI_1N5408
+D3 Vin j2  DI_1N5408
+D4 j3  j1  DI_1N5408
+D5 j3  Vin DI_1N5408
+R5 j6 j5 220
+D6 j2 j5 DI_1N4007
+
+C2a j6 j9 220n
+* schematic says "X2", does that mean 2 in parallel? series? something else?
+* nothing at all?  Doesn't seem to make much sense either way, unless it's for
+* heat dissipation or something...
+
+
+* regulator section
+R3 j7 j8 33k
+R4 j7 j6 33k
+* not sure if it matters, but this is just some arbitrary 10V zener I pulled out of a spice library
+Xzener j9 j8 DI_DDZ10C
+C1 j8 j9 2.2u
+* Rgnd9 j9 0 1m
+* Cgnd9 j9 0 0.01f
+
+* the MOSFET itself
+* subckt param order is:  gate source drain
+Xmosfet j10 j3 j2  BUZ41A/INF
+
+
+.end
