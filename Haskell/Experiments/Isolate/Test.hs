@@ -21,7 +21,7 @@ deriveGCompare ''TestChan
 
 genPrimes chan = sequence_
     [ do
-        threadDelay (fromInteger p * 100)
+        threadDelay (fromInteger p * 10)
         writeChan chan p
     | p <- takeWhile (<100000) primes
     ]

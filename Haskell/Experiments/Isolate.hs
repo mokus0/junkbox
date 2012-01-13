@@ -194,7 +194,14 @@ runRouter routes = do
                 
             TGrp.forkIO tgrp $ forever $ do
                 msg <- BS.hGetSome pipeR bufSz
-                writeChan wChan (pid, msg)
+                if BS.null msg
+                    then do
+                        eof <- hIsEOF pipeR
+                        if eof 
+                            then hClose pipeR
+                            else fail ("got 0-byte message on pipe from process " ++ show pid)
+                                -- ^ this shouldn't happen, right?
+                    else writeChan wChan (pid, msg)
             TGrp.forkIO tgrp $ forever $ do
                 (msgPid, msg) <- readChan rChan
                 when (msgPid /= pid) (BS.hPut pipeW msg)
