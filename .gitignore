@@ -59,9 +59,12 @@ tmtags
 
 dist
 *.o
+*.p_o
 *.hi
+*.hp
 *.chi
 *.chs.h
+*.prof
 
 
 ########
@@ -98,3 +101,15 @@ MAlonzo/
 
 *.glob
 *.vo
+
+########
+# Misc #
+########
+
+a.out
+
+#########
+# Idris #
+#########
+
+*.ibc

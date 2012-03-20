@@ -1,0 +1,7 @@
+MOSFET PWM experiments
+
+Vsig Vin 0 sin(0 120V 60Hz)
+
+Rlamp Vin Vneutral 144k
+
+.end

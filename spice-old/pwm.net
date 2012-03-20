@@ -1,0 +1,51 @@
+MOSFET PWM circuit
+
+.include buz41a.lib
+.include ddz10c.lib
+
+* power line
+Vsig Vin Vneutral sin(0 230V 60Hz)
+Rneut Vneutral 0 1
+
+* PWM control (with fake optocoupler)
+Vctl PWM 0 pulse(0 3.3 2ns 2ns 2ns 100us 1000us)
+.model switch SW (VT=2.1)
+S1 j8 j10 PWM 0 switch
+R4 j7 j6 33k
+
+* load
+Rload j1 Vneutral 1.2k
+
+* Rectifier section
+*SRC=1N5408;DI_1N5408;Diodes;Si;  1.00kV  3.00A  3.00us   Diodes Inc. Standard Rectifier 
+.MODEL DI_1N5408 D  ( IS=63.0n RS=14.1m BV=1.00k IBV=10.0u 
++                     CJO=53.0p  M=0.333 N=1.70 TT=4.32u )
+D2 j1  j2  DI_1N5408
+D3 Vin j2  DI_1N5408
+D4 j3  j1  DI_1N5408
+D5 j3  Vin DI_1N5408
+
+R5 j6 j5 220
+
+*SRC=1N4007;DI_1N4007;Diodes;Si;  1.00kV  1.00A  3.00us   Diodes, Inc. diode
+.MODEL DI_1N4007 D  ( IS=76.9p RS=42.0m BV=1.00k IBV=5.00u
++ CJO=26.5p  M=0.333 N=1.45 TT=4.32u )
+D6 j2 j5 DI_1N4007
+
+C2a j6 j9 220n
+C2b j6 j9 220n     $ schematic says "X2", does that mean 2 in parallel? series? something else?
+
+* MOSFET - subckt expects (gate, source, drain),  i believe...
+Xmosfet j10 j3 j2  BUZ41A/INF
+
+* regulator for C2
+R2 j3 j10 22k
+R3 j7 j8 33k
+Xzener j9 j8 DI_DDZ10C
+C1 j8 j9 2u
+
+* internal grounds?
+Rgnd9 j9 0 1
+Rgnd3 j3 0 1
+
+.end

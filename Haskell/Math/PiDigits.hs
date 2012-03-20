@@ -40,3 +40,4 @@ rlfToDigitsWith shouldEmit (rlf,cf) = case shouldEmit (rlfRange rlf cf) of
         finish (a,c) = fracToDigits a c
 
 fracToDigits p q = error "write me! (fracToDigits)"
+

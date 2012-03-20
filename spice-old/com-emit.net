@@ -1,0 +1,18 @@
+* Common emitter amplifier
+.model 2N3904  NPN(Is=6.734f Xti=3 Eg=1.11 Vaf=74.03 Bf=416.4 Ne=1.259
++              Ise=6.734f Ikf=66.78m Xtb=1.5 Br=.7371 Nc=2 Isc=0 Ikr=0 Rc=1
++              Cjc=3.638p Mjc=.3085 Vjc=.75 Fc=.5 Cje=4.493p Mje=.2593 
++              Vje=.75 Tr=239.5n Tf=301.2p Itf=.4 Vtf=4 Xtf=2 Rb=10)
+* 
+V1 Vcc 0 DC 12V 
+* need extra 0 at "4th" connection of transistors. bug?       
+Q1 vc vb ve 0 2n3904      
+Rc Vcc vc 2k
+Re ve 0 500
+R1 vb 0 7k
+R2 Vcc vb 33k
+C1 Vin vb 0.1u    
+C2 vc Vout 0.1u    
+RL Vout 0 100k    
+Vsig Vin 0 ac 10mV sin(0 10mV 1kHz) 
+.end
