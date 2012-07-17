@@ -2,11 +2,10 @@ Some notes on static typing:  What it's about and why it's nice.
 
 First, note that almost every language has some concept of what is, a priori, an unacceptable thing for a piece of code to say or do.  A few examples:
 
-    * Syntax:  If code is not well-formed, it is wrong.
-    * "null" pointers or object references:  If a program tries to read the memory address "0" or tries to send a message to a "nil" or "null" object, many languages will automatically throw an exception.
-    * Improper array indexing:  If x is an array, most languages consider x["hello there, array"] to be meaningless and will barf if you try it.
-    * Mentioning variables that aren't already declared:  Some languages require you to declare a variable before you can try to access it.
-
+* Syntax:  If code is not well-formed, it is wrong.
+* "null" pointers or object references:  If a program tries to read the memory address "0" or tries to send a message to a "nil" or "null" object, many languages will automatically throw an exception.
+* Improper array indexing:  If x is an array, most languages consider x["hello there, array"] to be meaningless and will barf if you try it.
+* Mentioning variables that aren't already declared:  Some languages require you to declare a variable before you can try to access it.
 
 All these examples have one thing in common:  If the "bad" thing is done by code, it is taken by the language implementation as irrefutable evidence that the code is wrong.  The implementation will either signal that fact or just collapse on itself.
 
