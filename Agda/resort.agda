@@ -21,13 +21,16 @@
 
 module resort where
 
-open import Data.AVL
+import Data.AVL.Sets
 open import Data.Bool
 open import Data.Empty
+open import Data.List using (List; []; _∷_)
 open import Data.Product
+open import Data.Unit
 open import Relation.Binary
   hiding (nonEmpty; module NonEmpty)
 open import Relation.Binary.PropositionalEquality
+import Relation.Binary.StrictToNonStrict as StrictToNonStrict
 open import Relation.Nullary
 open import Relation.Nullary.Decidable
 open import Level
@@ -69,6 +72,10 @@ forgetBound : ∀ {a o}{A : Set a}{lb : A} {< : Rel A o} → BoundedOrderedList 
 forgetBound [] = []
 forgetBound (x [ _ ]∷ xs) = x ∷ xs
 
+forgetOrder : ∀ {a o}{A : Set a}{< : Rel A o} → OrderedList < → List A
+forgetOrder []       = []
+forgetOrder (x ∷ xs) = x ∷ forgetOrder (forgetBound xs)
+
 private
   test : ∀{a}{A : Set a} → A → A
   test {a}{A} x = head (forgetBound (tail xs))
@@ -84,30 +91,27 @@ private
       open import Data.Unit
 
 module Assumptions₁ 
-  {c₁ c₂ ℓ₁ ℓ₂ ℓ₃ ℓ₄}
-  (decTotalOrder₁ : DecTotalOrder c₁ ℓ₁ ℓ₂)
-  (strictTotalOrder₂ : StrictTotalOrder c₂ ℓ₃ ℓ₄)
+  {c₁ c₂ ℓ₁ ℓ₂}
+  (T₁ : Set c₁) (_<₁_ : Rel T₁ ℓ₁) (isStrictTotalOrder₁ : IsStrictTotalOrder _≡_ _<₁_)
+  (T₂ : Set c₂) (_<₂_ : Rel T₂ ℓ₂) (isStrictTotalOrder₂ : IsStrictTotalOrder _≡_ _<₂_)
+  
   where
-    open DecTotalOrder decTotalOrder₁ using ()
-      renaming (Carrier to T₁; _≈_ to _≈₁_; _≤_ to _≤₁_)
-    open StrictTotalOrder strictTotalOrder₂ using ()
-      renaming (Carrier to T₂; _≈_ to _≈₂_; _<_ to _≤₂_)
-    
     module Assumptions₂
-      {ℓ₅}
-      (f     : T₁ → T₂)
-      (bound : T₁ → T₂ → Set ℓ₅)
+      (f : T₁ → T₂)
+      (bound : ∀ x → ∃ λ y -> ∀ z → x <₁ z → y <₂ f z)
       where
-        heapReSort : {x : T₁}
-          → Tree strictTotalOrder₂ (const T₂)
-          → BoundedOrderedList _≤₁_ x
-          → OrderedList _≤₂_
-        heapReSort = ?
+        open Data.AVL.Sets isStrictTotalOrder₂
         
-        resort₁ : {x : T₁} → BoundedOrderedList _≤₁_ x → BoundedOrderedList _≤₂_ ?
-        resort₁ [] = []
-        resort₁ {lb} (x [ lb≤₁x ]∷ xs) = ?
-    
-        resort : OrderedList _≤₁_ → OrderedList _≤₂_
+        heapReSort : 
+            ⟨Set⟩
+          → ∀ {x} → BoundedOrderedList _<₁_ x
+          → ∃ λ y → BoundedOrderedList _<₂_ y
+        heapReSort = ?
+--        
+--        resort₁ : {x : T₁} → BoundedOrderedList _≤₁_ x → BoundedOrderedList _≤₂_ ?
+--        resort₁ [] = []
+--        resort₁ {lb} (x [ lb≤₁x ]∷ xs) = ?
+--    
+        resort : OrderedList _<₁_ → OrderedList _<₂_
         resort [] = []
-        resort (x ∷ xs) = heapReSort (singleton (f x)) xs
+        resort (x ∷ xs) = forgetBound (proj₂ (heapReSort (singleton (f x)) xs))

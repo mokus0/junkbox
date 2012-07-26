@@ -69,15 +69,6 @@ instance VectorSpace Integer where
 instance InnerSpace Integer where
     (<.>) = (*)
 
-instance AdditiveGroup Rational where
-    zeroV = 0
-    negateV = negate
-    (^+^) = (+)
-
-instance VectorSpace Rational where
-    type Scalar Rational = Rational
-    (*^) = (*)
-
 instance InnerSpace Rational where
     (<.>) = (*)
 
