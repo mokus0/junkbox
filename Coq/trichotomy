@@ -1,0 +1,48 @@
+Theorem trichotomy':
+  forall m n,
+       (exists d, n = m + S d) 
+    \/ m = n
+    \/ (exists d, m = n + S d).
+induction m.
+ destruct n.
+  auto.
+
+  left; exists n; trivial.
+  
+ induction n.
+  right; right; exists m; trivial.
+
+  destruct IHn.
+   left; destruct H; exists (S x).
+   rewrite <- plus_n_Sm.
+   apply eq_S.
+   assumption.
+
+   destruct H.
+    left; exists 0; rewrite H.
+    rewrite <- plus_n_Sm; auto.
+
+    right; destruct H; rewrite H; destruct x.
+     left. 
+     rewrite <- plus_n_Sm; auto.
+
+     right.
+     exists x.
+     rewrite <- plus_n_Sm; auto.
+Qed.
+
+Theorem trichotomy:
+     forall P : nat -> nat -> Prop,
+    (forall x y, P x (x + S y)) ->
+    (forall x, P x x) ->
+    (forall x y, P (y + S x) y) ->
+    forall m n, P m n.
+intros P H_lt H_eq H_gt m n.
+destruct (trichotomy' m n); destruct H.
+ rewrite H; apply H_lt.
+
+ rewrite H; apply H_eq.
+
+ destruct H; rewrite H; apply H_gt.
+Qed.
+

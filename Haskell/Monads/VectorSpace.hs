@@ -6,12 +6,12 @@ module Monads.VectorSpace where
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans.Writer
-import Data.Complex
 import qualified Data.Foldable as F
 import Data.Function
 import qualified Data.Map as M
 import Data.Monoid
 import Data.VectorSpace
+import Math.CayleyDickson (Complex, Conj(..))
 import Unsafe.Coerce
 
 -- the free vector space over s with coefficients in k
@@ -26,6 +26,10 @@ v = unsafeCoerce
 
 unV :: V b a -> [(a,b)]
 unV = unsafeCoerce
+
+mapV :: (b -> c) -> V b a -> V c a
+mapV f (V x) = V (mapWriterT (map (fmap f')) x)
+    where f' (Product p) = Product (f p)
 
 real s = v [((), s)]
 
@@ -114,4 +118,28 @@ drugTest2 = bayes $ do
     (truth, test) <- drugTest1
     guard (test == Pos)
     return truth
+
+type Q a = V (Complex a)
+
+hadamard :: Bool -> Q Double Bool
+hadamard x = normalized $
+    if x
+        then v [(True, 1), (False, -1)]
+        else v [(True, 1), (False,  1)]
+
+qNot :: Bool -> Q Double Bool
+qNot = hadamard >=> hadamard
+
+-- not sure at qll about this, just goofing around...
+observe :: (Eq m, Conj a, Floating a, Ord t) => (t -> m) -> Q a t -> Q a (m, Q a t)
+observe f st = do
+    m <- f <$> st
+    let st' = normalized $ do
+            x <- st
+	    guard (f x == m)
+	    return x
+    return (m, st')
+
+measure :: (a ~ Scalar a, Conj a, InnerSpace a) => Q a t -> V a t
+measure = mapV magnitudeSq
 
