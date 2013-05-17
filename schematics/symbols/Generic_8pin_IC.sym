@@ -1,0 +1,94 @@
+v 20110115 2
+B 200 0 700 1000 3 0 0 0 -1 -1 0 -1 -1 -1 -1 -1
+P 1100 800 900 800 1 0 0
+{
+T 1100 800 5 10 0 0 0 0 1
+pintype=unknown
+T 845 795 5 10 0 1 0 6 1
+pinlabel=unknown
+T 995 845 5 10 1 1 0 0 1
+pinnumber=8
+T 1100 800 5 10 0 0 0 0 1
+pinseq=0
+}
+P 1100 600 900 600 1 0 0
+{
+T 1100 600 5 10 0 0 0 0 1
+pintype=unknown
+T 845 595 5 10 0 1 0 6 1
+pinlabel=unknown
+T 995 645 5 10 1 1 0 0 1
+pinnumber=7
+T 1100 600 5 10 0 0 0 0 1
+pinseq=0
+}
+P 1100 400 900 400 1 0 0
+{
+T 1100 400 5 10 0 0 0 0 1
+pintype=unknown
+T 845 395 5 10 0 1 0 6 1
+pinlabel=unknown
+T 995 445 5 10 1 1 0 0 1
+pinnumber=6
+T 1100 400 5 10 0 0 0 0 1
+pinseq=0
+}
+P 1100 200 900 200 1 0 0
+{
+T 1100 200 5 10 0 0 0 0 1
+pintype=unknown
+T 845 195 5 10 0 1 0 6 1
+pinlabel=unknown
+T 995 245 5 10 1 1 0 0 1
+pinnumber=5
+T 1100 200 5 10 0 0 0 0 1
+pinseq=0
+}
+P 0 800 200 800 1 0 0
+{
+T 0 800 5 10 0 0 0 0 1
+pintype=unknown
+T 255 795 5 10 0 1 0 0 1
+pinlabel=unknown
+T 105 845 5 10 1 1 0 6 1
+pinnumber=1
+T 0 800 5 10 0 0 0 0 1
+pinseq=0
+}
+P 0 600 200 600 1 0 0
+{
+T 0 600 5 10 0 0 0 0 1
+pintype=unknown
+T 255 595 5 10 0 1 0 0 1
+pinlabel=unknown
+T 105 645 5 10 1 1 0 6 1
+pinnumber=2
+T 0 600 5 10 0 0 0 0 1
+pinseq=0
+}
+P 0 400 200 400 1 0 0
+{
+T 0 400 5 10 0 0 0 0 1
+pintype=unknown
+T 255 395 5 10 0 1 0 0 1
+pinlabel=unknown
+T 105 445 5 10 1 1 0 6 1
+pinnumber=3
+T 0 400 5 10 0 0 0 0 1
+pinseq=0
+}
+P 0 200 200 200 1 0 0
+{
+T 0 200 5 10 0 0 0 0 1
+pintype=unknown
+T 255 195 5 10 0 1 0 0 1
+pinlabel=unknown
+T 105 245 5 10 1 1 0 6 1
+pinnumber=4
+T 0 200 5 10 0 0 0 0 1
+pinseq=0
+}
+T 200 1300 8 10 0 1 0 0 1
+device=Generic 8 pin IC
+T 200 1100 8 10 1 1 0 0 1
+refdes=U?
