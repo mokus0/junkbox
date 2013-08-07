@@ -1,0 +1,31 @@
+unnamed_net31	PORTC-1 U1-16 
+unnamed_net30	PORTC-2 U1-15 
+unnamed_net29	PORTC-3 U1-14 
+unnamed_net28	PORTC-4 U1-13 
+unnamed_net27	PORTC-5 U1-12 
+unnamed_net26	PORTC-6 U1-11 
+unnamed_net25	PORTC-7 U1-10 
+unnamed_net24	PORTC-8 U1-9 
+unnamed_net23	PWR/RST-3 PDI-2 R1-1 C5-2 U1-17 
+unnamed_net22	PORTR-2 C3-2 U2-1 U1-19 
+unnamed_net21	PORTR-1 C4-2 U2-2 U1-20 
+unnamed_net20	PORTD-8 U1-21 
+unnamed_net19	PORTD-7 U1-22 
+unnamed_net18	PORTD-6 U1-23 
+unnamed_net17	PORTD-5 U1-24 
+unnamed_net16	PORTD-4 U1-25 
+unnamed_net15	PORTD-3 U1-26 
+unnamed_net14	PORTD-2 U1-27 
+unnamed_net13	PORTD-1 U1-28 
+unnamed_net12	PORTA-8 U1-29 
+unnamed_net11	PORTA-7 U1-30 
+unnamed_net10	PORTA-6 U1-31 
+unnamed_net9	PWR/RST-2 C1-2 U1-32 
+unnamed_net8	PWR/RST-4 PDI-5 R1-2 U1-8 
+unnamed_net7	PDI-1 U1-7 
+unnamed_net6	PORTA-1 U1-6 
+unnamed_net5	PORTA-2 U1-5 
+unnamed_net4	PORTA-3 U1-4 
+unnamed_net3	PORTA-4 U1-3 
+unnamed_net2	PORTA-5 U1-2 
+unnamed_net1	C1-1 PWR/RST-1 PDI-6 U1-33 C3-1 C5-1 C4-1 U1-18 U1-1 

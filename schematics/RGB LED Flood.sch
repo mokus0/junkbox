@@ -16,11 +16,11 @@ device=Generic 8 pin IC
 T 41300 43800 5 10 1 1 0 0 1
 refdes=U1
 }
-C 41100 41100 1 0 0 Generic_8pin_IC.sym
+C 42200 42100 1 180 0 Generic_8pin_IC.sym
 {
-T 41300 42400 5 10 0 1 0 0 1
+T 42000 40800 5 10 0 1 180 0 1
 device=Generic 8 pin IC
-T 41300 42200 5 10 1 1 0 0 1
+T 41500 42300 5 10 1 1 180 0 1
 refdes=U2
 }
 C 41500 48300 1 90 1 lm7805-1.sym
