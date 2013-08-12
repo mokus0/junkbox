@@ -5,6 +5,8 @@ T 48600 49400 5 10 1 1 0 0 1
 device=ATmega RFR2
 T 48600 49200 5 10 1 1 0 0 1
 refdes=U?
+T 43100 43100 5 10 0 0 0 0 1
+footprint=QFN64_9_EP
 }
 C 41800 37700 1 270 0 capacitor-2.sym
 {
