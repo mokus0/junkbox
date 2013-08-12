@@ -3,10 +3,10 @@ unnamed_net36	PORTA-4 U2-43
 unnamed_net35	PORTA-3 U2-42 
 unnamed_net34	PORTA-2 U2-41 
 unnamed_net33	PORTA-1 U2-40 
-unnamed_net32	PWR/RST-4 C3-1 U2-39 
+unnamed_net32	PWR/RST-2 C3-1 U2-39 
 unnamed_net31	C2-2 U1-2 U2-37 
 unnamed_net30	C1-2 U1-1 U2-36 
-unnamed_net29	R1-1 PDI-5 PWR/RST-2 U2-35 
+unnamed_net29	PDI-5 R1-1 PWR/RST-4 U2-35 
 unnamed_net28	PDI-1 U2-34 
 unnamed_net27	PORTE-4 U2-33 
 unnamed_net26	PORTE-3 U2-32 
