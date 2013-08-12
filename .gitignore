@@ -120,8 +120,12 @@ a.out
 
 *.bak*
 *.pcb-
+*.fp-
 *.net
 *.cmd
 *.new.pcb
 #*.sch#
+*.sym~
+*.sch~
+
 
