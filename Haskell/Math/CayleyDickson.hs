@@ -55,20 +55,6 @@ instance Conj a => Num (CD a) where
 instance Conj a => Conj (CD a) where
     conj (CD a b) = CD (conj a) (negate b)
 
-instance VectorSpace Int where
-    type Scalar Int = Int
-    (*^) = (*)
-
-instance InnerSpace Int where
-    (<.>) = (*)
-
-instance VectorSpace Integer where
-    type Scalar Integer = Integer
-    (*^) = (*)
-
-instance InnerSpace Integer where
-    (<.>) = (*)
-
 instance InnerSpace Rational where
     (<.>) = (*)
 

@@ -5,7 +5,7 @@ data ProjectiveLine a
     | Infinity
     deriving (Eq, Ord)
 
-instance Num a => Show (ProjectiveLine a) where
+instance Show a => Show (ProjectiveLine a) where
     showsPrec p (Real x) = showsPrec p x
     showsPrec p Infinity = showString "Infinity"
 
@@ -24,7 +24,7 @@ instance Num a => Num (ProjectiveLine a) where
     signum (Real x) = Real (signum x)
     signum Infinity = Infinity
 
-instance Fractional a => Fractional (ProjectiveLine a) where
+instance (Fractional a, Eq a) => Fractional (ProjectiveLine a) where
     fromRational = Real . fromRational
     recip (Real 0) = Infinity
     recip (Real x) = Real (recip x)

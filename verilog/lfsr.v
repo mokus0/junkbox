@@ -13,7 +13,7 @@ module lfsr(clk, rst, in, out);
     else if (DIRECT) out = (out << 1) ^ ((in ^ out[0]) ? POLY : 0);
     else             out = (in | out << 1) ^ (out[0] ? POLY : 0);
     
-    always @(posedge clk)
-    $display("\t[%00b]", out);
+//    always @(posedge clk)
+//    $display("\t[%00b]", out);
     
 endmodule
